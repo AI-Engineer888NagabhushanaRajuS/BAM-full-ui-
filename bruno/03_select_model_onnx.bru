@@ -1,0 +1,22 @@
+meta {
+  name: Select Local ONNX Model
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/select-model
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "model": "laya-onnx"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.activeModel: eq laya-onnx
+}

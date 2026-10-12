@@ -1,0 +1,29 @@
+meta {
+  name: Portfolio MCP - List Tools
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{portfolioUrl}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.result.tools: isDefined
+}

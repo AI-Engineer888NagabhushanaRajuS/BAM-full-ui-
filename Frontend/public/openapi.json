@@ -1,0 +1,318 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BAM & Jev Decision Engine API",
+    "description": "Enterprise-grade System-1 Decision Judge, RAG Context Sufficiency Sentinel, and SOW Contract Validation API for the BullMQ-BAM Workbench.",
+    "version": "1.2.0",
+    "contact": {
+      "name": "BAM Architecture Operations",
+      "url": "https://bam-workbench.internal"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5174/laya",
+      "description": "Vite Dev Proxy (Local Frontend)"
+    },
+    {
+      "url": "http://127.0.0.1:8787",
+      "description": "Direct Laya Decision Server (Port 8787)"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Engine Health & Readiness Status",
+        "description": "Returns status of local Laya ONNX ModernBERT-large model, OpenRouter cloud key configuration, and active decision model.",
+        "responses": {
+          "200": {
+            "description": "Engine status details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "summary": "List Available Decision Models",
+        "description": "Enumerates all registered System-1 decision engines (OpenRouter Cloud, Local Laya ONNX, Calibrated Heuristic).",
+        "responses": {
+          "200": {
+            "description": "Model catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/select-model": {
+      "post": {
+        "summary": "Switch Active Decision Model",
+        "description": "Switches the active evaluation engine on the fly between OpenRouter Cloud and Local Laya ONNX.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "enum": ["openrouter", "laya-onnx", "laya-multilingual", "jev-system-one-simulated"]
+                  }
+                },
+                "required": ["model"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Model switched confirmation"
+          }
+        }
+      }
+    },
+    "/judge-context": {
+      "post": {
+        "summary": "Evaluate Ingested IP Context Sufficiency",
+        "description": "Jev & Laya System-1 evaluation of uploaded discovery documents and extracted engineering facts. Computes calibrated P(sufficient), depth, coverage, and contract gap risk.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextJudgeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Context sufficiency evaluation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextJudgeResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/judge": {
+      "post": {
+        "summary": "Evaluate SOW Draft Accuracy & ISATVON Rubric",
+        "description": "System-1 evaluation of SOW requirements against discovery facts. Computes faithfulness, coverage, and clarity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SowJudgeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SOW accuracy score and findings"
+          }
+        }
+      }
+    },
+    "/config": {
+      "post": {
+        "summary": "Configure Cloud API Key",
+        "description": "Sets the OpenRouter API key for cloud decision routing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "apiKey": { "type": "string" },
+                  "model": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated"
+          }
+        }
+      }
+    },
+    "/query-context": {
+      "post": {
+        "summary": "Query Cognee GraphRAG context with pre-flight verification",
+        "description": "Evaluates factual questions against the knowledge graph with source citations.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["question"],
+                "properties": {
+                  "question": { "type": "string" },
+                  "sources": { "type": "array", "items": { "type": "string" } },
+                  "facts": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grounded answer with citations and confidence score",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "question": { "type": "string" },
+                    "answer": { "type": "string" },
+                    "citations": { "type": "array", "items": { "type": "object" } },
+                    "confidence": { "type": "number" },
+                    "passed": { "type": "boolean" },
+                    "model": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "ready": { "type": "boolean" },
+          "layaLoaded": { "type": "boolean" },
+          "openRouterConfigured": { "type": "boolean" },
+          "activeModel": { "type": "string" }
+        }
+      },
+      "ModelCatalog": {
+        "type": "object",
+        "properties": {
+          "activeModel": { "type": "string" },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ContextJudgeRequest": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "size": { "type": "integer" }
+              }
+            }
+          },
+          "facts": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" }
+              }
+            }
+          }
+        },
+        "required": ["sources", "facts"]
+      },
+      "ContextJudgeResult": {
+        "type": "object",
+        "properties": {
+          "model": { "type": "string" },
+          "verdict": { "type": "string", "enum": ["sufficient", "marginal", "insufficient"] },
+          "summary": { "type": "string" },
+          "inputTokens": { "type": "integer" },
+          "ms": { "type": "integer" },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "score": { "type": "number" },
+                "detail": { "type": "string" }
+              }
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "area": { "type": "string" },
+                "text": { "type": "string" },
+                "severity": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "SowJudgeRequest": {
+        "type": "object",
+        "properties": {
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "n": { "type": "integer" },
+                "fields": { "type": "object" }
+              }
+            }
+          },
+          "facts": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["requirements", "facts"]
+      }
+    }
+  }
+}

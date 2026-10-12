@@ -1,0 +1,131 @@
+<svg width="1000" height="420" viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg">
+    
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0b0f17" />
+            <stop offset="100%" stop-color="#111827" />
+        </linearGradient>
+        <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#161f30" />
+            <stop offset="100%" stop-color="#1a253a" />
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1f6feb" />
+            <stop offset="100%" stop-color="#388bfd" />
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#238636" />
+            <stop offset="100%" stop-color="#2ea043" />
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8957e5" />
+            <stop offset="100%" stop-color="#a371f7" />
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d29922" />
+            <stop offset="100%" stop-color="#e3b341" />
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+        </filter>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3fb950" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#bc8cff" />
+        </marker>
+    </defs>
+    <style>
+        .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #f0f6fc; }
+        .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #8b949e; }
+        .node-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+        .node-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
+        .badge-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; font-weight: 600; }
+        .tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10.5px; fill: #79c0ff; font-weight: 500; }
+    </style>
+
+    <rect width="1000" height="420" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+    
+    <text x="30" y="38" class="title">BAM Full-Cycle Architecture: Intake to MicroVM Sandbox</text>
+    <text x="30" y="58" class="subtitle">Autonomous Enterprise RFQ-to-FastMCP Execution Pipeline with Fail-Closed Verification</text>
+
+    <!-- STAGE 1: INTAKE & THREAT DEFENSE -->
+    <g filter="url(#shadow)">
+        <rect x="30" y="85" width="210" height="295" rx="8" fill="url(#cardGrad)" stroke="#388bfd" stroke-width="1.2" />
+        <rect x="42" y="97" width="80" height="20" rx="4" fill="#1f6feb" fill-opacity="0.2" />
+        <text x="50" y="111" fill="#58a6ff" class="badge-text">STAGE 1.1</text>
+        <text x="42" y="138" class="node-title">Intake &amp; Threat Perimeter</text>
+        <text x="42" y="156" class="node-desc">• FDE Scope Directives</text>
+        <text x="42" y="172" class="node-desc">• Native Voice Dictation</text>
+        <text x="42" y="188" class="node-desc">• Air-gapped Quarantine</text>
+        <text x="42" y="204" class="node-desc">• ClamAV Signature Scan</text>
+        <text x="42" y="220" class="node-desc">• Repel Evasion Shield</text>
+        <text x="42" y="236" class="node-desc">• Unanimous Twin Verdict</text>
+        <rect x="42" y="255" width="186" height="38" rx="5" fill="#0d1117" stroke="#30363d" />
+        <text x="50" y="272" class="tag">Release Gate: 100% Clean</text>
+        <text x="50" y="286" class="node-desc">Fail-Closed on Scanner Outage</text>
+    </g>
+
+    <!-- Connector 1 -> 2 -->
+    <line x1="240" y1="230" x2="270" y2="230" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- STAGE 2: GRAPHRAG & PRE-FLIGHT -->
+    <g filter="url(#shadow)">
+        <rect x="275" y="85" width="210" height="295" rx="8" fill="url(#cardGrad)" stroke="#8957e5" stroke-width="1.2" />
+        <rect x="287" y="97" width="80" height="20" rx="4" fill="#8957e5" fill-opacity="0.2" />
+        <text x="295" y="111" fill="#bc8cff" class="badge-text">STAGE 2.1-2.3</text>
+        <text x="287" y="138" class="node-title">GraphRAG &amp; Pre-Flight</text>
+        <text x="287" y="156" class="node-desc">• Cognee Ingestion &amp; OKF v0.2</text>
+        <text x="287" y="172" class="node-desc">• Triples &amp; Entity Resolution</text>
+        <text x="287" y="188" class="node-desc">• Master Questionnaire Battery</text>
+        <text x="287" y="204" class="node-desc">• "Ask BullMind" LLM Inquiries</text>
+        <text x="287" y="220" class="node-desc">• 5 Client Domain Masters</text>
+        <text x="287" y="236" class="node-desc">• 80% Context Sufficiency Gate</text>
+        <rect x="287" y="255" width="186" height="38" rx="5" fill="#0d1117" stroke="#30363d" />
+        <text x="295" y="272" fill="#bc8cff" class="tag">Gate: &gt;= 80% Sufficiency</text>
+        <text x="295" y="286" class="node-desc">Evaluated by Laya / Jev Judge</text>
+    </g>
+
+    <!-- Connector 2 -> 3 -->
+    <line x1="485" y1="230" x2="515" y2="230" stroke="#bc8cff" stroke-width="2" marker-end="url(#arrowPurple)" />
+
+    <!-- STAGE 3: SOW & ISATVON -->
+    <g filter="url(#shadow)">
+        <rect x="520" y="85" width="210" height="295" rx="8" fill="url(#cardGrad)" stroke="#2ea043" stroke-width="1.2" />
+        <rect x="532" y="97" width="80" height="20" rx="4" fill="#238636" fill-opacity="0.2" />
+        <text x="540" y="111" fill="#3fb950" class="badge-text">STAGE 3.1-3.2</text>
+        <text x="532" y="138" class="node-title">Dynamic SOW &amp; Contract</text>
+        <text x="532" y="156" class="node-desc">• Non-hardcoded SOW Synthesis</text>
+        <text x="532" y="172" class="node-desc">• FDE Directives Embedded</text>
+        <text x="532" y="188" class="node-desc">• CAD STEP Tolerance &amp; Ra</text>
+        <text x="532" y="204" class="node-desc">• BOM Rev C &amp; 17-4PH Delta</text>
+        <text x="532" y="220" class="node-desc">• 7-Field ISATVON 1.4 Schema</text>
+        <text x="532" y="236" class="node-desc">• Loopy Bounded Router Cycles</text>
+        <rect x="532" y="255" width="186" height="38" rx="5" fill="#0d1117" stroke="#30363d" />
+        <text x="540" y="272" fill="#3fb950" class="tag">Approval &amp; Hash Freeze</text>
+        <text x="540" y="286" class="node-desc">Edits invalidate prior certs</text>
+    </g>
+
+    <!-- Connector 3 -> 4 -->
+    <line x1="730" y1="230" x2="760" y2="230" stroke="#3fb950" stroke-width="2" marker-end="url(#arrowGreen)" />
+
+    <!-- STAGE 4: TEMPORAL & SANDBOX -->
+    <g filter="url(#shadow)">
+        <rect x="765" y="85" width="205" height="295" rx="8" fill="url(#cardGrad)" stroke="#d29922" stroke-width="1.2" />
+        <rect x="777" y="97" width="80" height="20" rx="4" fill="#d29922" fill-opacity="0.2" />
+        <text x="785" y="111" fill="#e3b341" class="badge-text">STAGE 4.1-4.4</text>
+        <text x="777" y="138" class="node-title">Execution &amp; Testing</text>
+        <text x="777" y="156" class="node-desc">• Temporal Workflows A-D</text>
+        <text x="777" y="172" class="node-desc">• AST Code Gen (skill.py.j2)</text>
+        <text x="777" y="188" class="node-desc">• Self-Healing Fallback (Act D)</text>
+        <text x="777" y="204" class="node-desc">• CubeSandbox MicroVM</text>
+        <text x="777" y="220" class="node-desc">• Promptfoo Assertion Matrix</text>
+        <text x="777" y="236" class="node-desc">• Staging / BAM_db Commit</text>
+        <rect x="777" y="255" width="181" height="38" rx="5" fill="#0d1117" stroke="#30363d" />
+        <text x="785" y="272" fill="#e3b341" class="tag">Deploy Certification</text>
+        <text x="785" y="286" class="node-desc">SHA-256 Manifest Lock</text>
+    </g>
+</svg>

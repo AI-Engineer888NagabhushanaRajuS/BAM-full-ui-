@@ -1,0 +1,127 @@
+<svg width="920" height="420" viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg">
+    
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0b0f17" />
+            <stop offset="100%" stop-color="#111827" />
+        </linearGradient>
+        <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#161f30" />
+            <stop offset="100%" stop-color="#1a253a" />
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1f6feb" />
+            <stop offset="100%" stop-color="#388bfd" />
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#238636" />
+            <stop offset="100%" stop-color="#2ea043" />
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8957e5" />
+            <stop offset="100%" stop-color="#a371f7" />
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d29922" />
+            <stop offset="100%" stop-color="#e3b341" />
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+        </filter>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3fb950" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#bc8cff" />
+        </marker>
+    </defs>
+    <style>
+        .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #f0f6fc; }
+        .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #8b949e; }
+        .node-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+        .node-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
+        .badge-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; font-weight: 600; }
+        .tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10.5px; fill: #79c0ff; font-weight: 500; }
+    </style>
+
+    <rect width="920" height="420" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+    <text x="30" y="38" class="title">Dynamic SOW Synthesis Engine: Non-Hardcoded Multi-Stream Generation</text>
+    <text x="30" y="58" class="subtitle">produceDynamicSowHtml() Fusing FDE Intent, Verified Discovery, CAD Tolerances &amp; ISATVON 1.4</text>
+
+    <!-- 6 Input Feeds on Left -->
+    <g filter="url(#shadow)">
+        <rect x="30" y="85" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#388bfd" />
+        <text x="42" y="103" class="node-title">1. FDE Scope Directives</text>
+        <text x="42" y="118" class="node-desc">Typed &amp; Windows Voice Dictation</text>
+
+        <rect x="30" y="137" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#2ea043" />
+        <text x="42" y="155" class="node-title">2. Released Clean Files</text>
+        <text x="42" y="170" class="node-desc">s.uploads.filter(isReleased)</text>
+
+        <rect x="30" y="189" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#8957e5" />
+        <text x="42" y="207" class="node-title">3. CAD STEP Tolerances</text>
+        <text x="42" y="222" class="node-desc">±0.05mm bore, Ra 0.8µm, MIL-A-8625</text>
+
+        <rect x="30" y="241" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#d29922" />
+        <text x="42" y="259" class="node-title">4. BOM Rev C Delta</text>
+        <text x="42" y="274" class="node-desc">17-4PH housing, EN 10204 3.1 certs</text>
+
+        <rect x="30" y="293" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#388bfd" />
+        <text x="42" y="311" class="node-title">5. Rules Master &amp; Costing</text>
+        <text x="42" y="326" class="node-desc">$120/hr SMT, 1.5% scrap, =SUM() formula</text>
+
+        <rect x="30" y="345" width="260" height="42" rx="6" fill="url(#cardGrad)" stroke="#2ea043" />
+        <text x="42" y="363" class="node-title">6. Verified Facts &amp; Custom Qs</text>
+        <text x="42" y="378" class="node-desc">Cognified checks passing &gt;= 80% gate</text>
+    </g>
+
+    <!-- Convergence Lines -->
+    <line x1="290" y1="106" x2="350" y2="235" stroke="#58a6ff" stroke-width="1.5" />
+    <line x1="290" y1="158" x2="350" y2="235" stroke="#3fb950" stroke-width="1.5" />
+    <line x1="290" y1="210" x2="350" y2="235" stroke="#bc8cff" stroke-width="1.5" />
+    <line x1="290" y1="262" x2="350" y2="235" stroke="#e3b341" stroke-width="1.5" />
+    <line x1="290" y1="314" x2="350" y2="235" stroke="#58a6ff" stroke-width="1.5" />
+    <line x1="290" y1="366" x2="350" y2="235" stroke="#3fb950" stroke-width="1.5" />
+
+    <!-- Center Engine Box -->
+    <g filter="url(#shadow)">
+        <rect x="355" y="140" width="230" height="190" rx="10" fill="url(#cardGrad)" stroke="#58a6ff" stroke-width="2" />
+        <text x="375" y="170" fill="#58a6ff" class="node-title">Synthesis Engine</text>
+        <text x="375" y="195" class="node-desc">• generateDynamicRequirements()</text>
+        <text x="375" y="215" class="node-desc">• 7-Field ISATVON Tagging</text>
+        <text x="375" y="235" class="node-desc">• Parameter Injection</text>
+        <text x="375" y="255" class="node-desc">• SOW HTML Structuring</text>
+        <rect x="370" y="275" width="200" height="36" rx="5" fill="#0d1117" stroke="#30363d" />
+        <text x="380" y="293" class="tag">produceDynamicSowHtml()</text>
+        <text x="380" y="305" class="node-desc">Full contract compliance</text>
+    </g>
+
+    <line x1="585" y1="235" x2="635" y2="235" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- Right Box: Output SOW Requirements -->
+    <g filter="url(#shadow)">
+        <rect x="640" y="85" width="250" height="305" rx="8" fill="url(#cardGrad)" stroke="#30363d" />
+        <text x="655" y="115" class="node-title">Generated SOW Structure</text>
+        
+        <text x="655" y="145" fill="#58a6ff" class="node-title">Req 1: Threat Perimeter</text>
+        <text x="655" y="160" class="node-desc">FDE Scope Directives &amp; Dual Scan</text>
+
+        <text x="655" y="185" fill="#58a6ff" class="node-title">Req 2: CAD STEP Geometry</text>
+        <text x="655" y="200" class="node-desc">±0.05mm bore tol, Ra 0.8µm, MIL Spec</text>
+
+        <text x="655" y="225" fill="#58a6ff" class="node-title">Req 3: BOM Delta &amp; Certs</text>
+        <text x="655" y="240" class="node-desc">17-4PH housing, EN 10204 3.1 certs</text>
+
+        <text x="655" y="265" fill="#58a6ff" class="node-title">Req 4: Manufacturing Costing</text>
+        <text x="655" y="280" class="node-desc">SMT $120/hr, 1.5% scrap, =SUM()</text>
+
+        <text x="655" y="305" fill="#bc8cff" class="node-title">Req 5: ISATVON 1.4 Loopy</text>
+        <text x="655" y="320" class="node-desc">max_iter: 3, budget: 5s, decoupled tool</text>
+
+        <text x="655" y="345" fill="#3fb950" class="node-title">Req 6+: Commercial &amp; Custom</text>
+        <text x="655" y="360" class="node-desc">ASTM packaging, Net 45, custom rules</text>
+    </g>
+</svg>

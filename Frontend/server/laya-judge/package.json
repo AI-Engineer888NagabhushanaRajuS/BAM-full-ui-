@@ -1,0 +1,9 @@
+{
+  "name": "bam-laya-judge",
+  "private": true,
+  "type": "module",
+  "description": "SOW accuracy judge for 3.1: runs Laya (convaiinnovations/laya, Jev-compatible System-1 model) via @receptron/laya",
+  "scripts": { "start": "node --experimental-strip-types server.ts" },
+  "dependencies": { "@receptron/laya": "^0.1.2" },
+  "engines": { "node": ">=20" }
+}

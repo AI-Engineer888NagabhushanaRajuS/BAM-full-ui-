@@ -1,0 +1,36 @@
+{
+  "name": "bullm-bam-workbench",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check": "node --experimental-strip-types src/api/mock.check.ts",
+    "test": "node --experimental-strip-types --test src/tracker/tracker.test.ts src/tracker/evidence.test.ts src/rag/ragPipeline.test.ts src/lib/sowDiff.test.ts src/lib/repair.test.ts src/lib/bamUi.test.ts src/api/scanGate.test.ts src/rag/okf.test.ts src/rag/cognee.test.ts server/laya-judge/judge.test.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@refinedev/core": "^5.0.12",
+    "@tanstack/react-query": "^5.104.1",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "@uppy/core": "^6.2.0",
+    "@uppy/dashboard": "^6.0.1",
+    "@uppy/react": "^6.0.0",
+    "@xyflow/react": "^12.12.0",
+    "ag-grid-community": "^36.2.0",
+    "ag-grid-react": "^36.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  },
+  "private": true
+}

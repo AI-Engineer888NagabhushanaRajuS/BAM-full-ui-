@@ -1,0 +1,22 @@
+meta {
+  name: Select OpenRouter Cloud Model
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/select-model
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "model": "openrouter"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.activeModel: eq openrouter
+}

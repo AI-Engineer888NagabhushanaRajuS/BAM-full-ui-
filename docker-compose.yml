@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  laya-judge:
+    build:
+      context: ./Frontend/server/laya-judge
+      dockerfile: Dockerfile
+    container_name: bam-laya-judge
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=google/gemini-2.0-flash-001
+      - CACHE_DIR=/root/.cache/receptron
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: bam-workbench
+    ports:
+      - "5174:5174"
+    environment:
+      - VITE_OPENROUTER_KEY=${OPENROUTER_API_KEY}
+      - VITE_APP_TIMEZONE=Asia/Kolkata
+    depends_on:
+      laya-judge:
+        condition: service_healthy
+    restart: unless-stopped

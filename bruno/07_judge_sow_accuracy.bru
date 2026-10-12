@@ -1,0 +1,45 @@
+meta {
+  name: Judge SOW Accuracy
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/judge
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-OpenRouter-Key: {{openRouterApiKey}}
+}
+
+body:json {
+  {
+    "requirements": [
+      {
+        "n": 1,
+        "fields": {
+          "inputs": "MPW-4421-bracket.step CAD file",
+          "skills": "CNC Milling 5-axis",
+          "architecture": "Cellular machining line",
+          "tools": "Haas UMC-750",
+          "validation": "EN 10204 3.1 cert and CMM report",
+          "orchestration": "First article inspection",
+          "notifications": "Alert on excursion > 0.03mm"
+        }
+      }
+    ],
+    "facts": [
+      "CNC Machining tolerance +-0.05mm required for bracket items",
+      "Fastener material SS316 with EN 10204 3.1 inspection certification"
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.metrics: isDefined
+  res.body.inputTokens: gt 0
+}

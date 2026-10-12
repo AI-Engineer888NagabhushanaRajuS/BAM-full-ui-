@@ -1,0 +1,38 @@
+meta {
+  name: Judge Context Sufficiency - Rich Corpus
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/judge-context
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-OpenRouter-Key: {{openRouterApiKey}}
+}
+
+body:json {
+  {
+    "sources": [
+      { "name": "RFQ_Package_Meridian.pdf", "type": "PDF" },
+      { "name": "BOM_RevC.xlsx", "type": "XLSX" },
+      { "name": "MPW-4421-bracket.step", "type": "STEP" }
+    ],
+    "facts": [
+      "CNC Machining tolerance +-0.05mm required for bracket items",
+      "Fastener material SS316 with EN 10204 3.1 inspection certification",
+      "Surface finish Ra 0.8 um with anodized clear finish per MIL-A-8625 Type II",
+      "Delivery due date within 4 weeks from purchase order receipt"
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.metrics: isDefined
+  res.body.inputTokens: gt 0
+}

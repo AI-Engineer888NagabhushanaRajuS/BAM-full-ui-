@@ -1,0 +1,14 @@
+node_modules/
+Frontend/node_modules/
+.pytest_cache/
+__pycache__/
+*.pyc
+dist/
+Frontend/dist/
+.DS_Store
+Thumbs.db
+-s
+-L
+.env
+*.env
+**/.env

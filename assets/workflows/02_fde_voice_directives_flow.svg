@@ -1,0 +1,104 @@
+<svg width="860" height="360" viewBox="0 0 860 360" xmlns="http://www.w3.org/2000/svg">
+    
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0b0f17" />
+            <stop offset="100%" stop-color="#111827" />
+        </linearGradient>
+        <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#161f30" />
+            <stop offset="100%" stop-color="#1a253a" />
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1f6feb" />
+            <stop offset="100%" stop-color="#388bfd" />
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#238636" />
+            <stop offset="100%" stop-color="#2ea043" />
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8957e5" />
+            <stop offset="100%" stop-color="#a371f7" />
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d29922" />
+            <stop offset="100%" stop-color="#e3b341" />
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+        </filter>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3fb950" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#bc8cff" />
+        </marker>
+    </defs>
+    <style>
+        .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #f0f6fc; }
+        .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #8b949e; }
+        .node-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+        .node-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
+        .badge-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; font-weight: 600; }
+        .tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10.5px; fill: #79c0ff; font-weight: 500; }
+    </style>
+
+    <rect width="860" height="360" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+    <text x="30" y="38" class="title">FDE Directives &amp; Windows Speech-to-Text Pipeline (Stage 1.1)</text>
+    <text x="30" y="58" class="subtitle">Multi-Modal Pre-Ingestion Intent Capture &amp; Context Propagation</text>
+
+    <!-- Left Box: Dual Input Methods -->
+    <g filter="url(#shadow)">
+        <rect x="30" y="90" width="220" height="230" rx="8" fill="url(#cardGrad)" stroke="#30363d" />
+        <text x="45" y="118" class="node-title">1. FDE Input Modes</text>
+        <rect x="45" y="135" width="190" height="45" rx="6" fill="#0d1117" stroke="#388bfd" stroke-width="1" />
+        <text x="55" y="153" fill="#58a6ff" class="node-title">⌨ Manual Keyboard Input</text>
+        <text x="55" y="168" class="node-desc">Directives &amp; Domain Directives</text>
+
+        <rect x="45" y="195" width="190" height="45" rx="6" fill="#0d1117" stroke="#2ea043" stroke-width="1" />
+        <text x="55" y="213" fill="#3fb950" class="node-title">⚡ 1-Click Defense Presets</text>
+        <text x="55" y="228" class="node-desc">CAD, 17-4PH, SMT, ISATVON 1.4</text>
+
+        <rect x="45" y="255" width="190" height="45" rx="6" fill="#0d1117" stroke="#d29922" stroke-width="1" />
+        <text x="55" y="273" fill="#e3b341" class="node-title">🎙 Native Windows Voice</text>
+        <text x="55" y="288" class="node-desc">webkitSpeechRecognition API</text>
+    </g>
+
+    <line x1="250" y1="205" x2="300" y2="205" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- Center Box: Reactive Store & State -->
+    <g filter="url(#shadow)">
+        <rect x="305" y="90" width="240" height="230" rx="8" fill="url(#cardGrad)" stroke="#388bfd" />
+        <text x="320" y="118" class="node-title">2. Reactive State &amp; Storage</text>
+        <text x="320" y="145" class="node-desc">• Store Key: fdeGoals in UiStore</text>
+        <text x="320" y="165" class="node-desc">• LocalStorage: 'bam-fde-goals'</text>
+        <text x="320" y="185" class="node-desc">• Live Speech Interim Streaming</text>
+        <text x="320" y="205" class="node-desc">• Pulsing Visual Feedback Dot</text>
+        <rect x="320" y="225" width="210" height="75" rx="6" fill="#0d1117" stroke="#30363d" />
+        <text x="330" y="245" class="tag">Captured Directives Payload:</text>
+        <text x="330" y="263" class="node-desc">"Enforce MIL-A-8625 Type II clear</text>
+        <text x="330" y="278" class="node-desc">anodize, 17-4PH certs and loopy..."</text>
+    </g>
+
+    <line x1="545" y1="205" x2="595" y2="205" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- Right Box: Consumer Subsystems -->
+    <g filter="url(#shadow)">
+        <rect x="600" y="90" width="230" height="230" rx="8" fill="url(#cardGrad)" stroke="#2ea043" />
+        <text x="615" y="118" class="node-title">3. Downstream Subsystems</text>
+        
+        <rect x="615" y="135" width="200" height="70" rx="6" fill="#0d1117" stroke="#8957e5" stroke-width="1" />
+        <text x="625" y="155" fill="#bc8cff" class="node-title">Cognee GraphRAG (Stage 2)</text>
+        <text x="625" y="172" class="node-desc">Guides retrieval queries &amp;</text>
+        <text x="625" y="187" class="node-desc">context graph clustering</text>
+
+        <rect x="615" y="220" width="200" height="80" rx="6" fill="#0d1117" stroke="#2ea043" stroke-width="1" />
+        <text x="625" y="240" fill="#3fb950" class="node-title">Dynamic SOW (Stage 3.1)</text>
+        <text x="625" y="257" class="node-desc">Synthesized into Requirement 1:</text>
+        <text x="625" y="272" class="node-desc">"Align with FDE Intake Directives:"</text>
+    </g>
+</svg>

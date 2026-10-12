@@ -1,0 +1,99 @@
+<svg width="840" height="340" viewBox="0 0 840 340" xmlns="http://www.w3.org/2000/svg">
+    
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0b0f17" />
+            <stop offset="100%" stop-color="#111827" />
+        </linearGradient>
+        <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#161f30" />
+            <stop offset="100%" stop-color="#1a253a" />
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1f6feb" />
+            <stop offset="100%" stop-color="#388bfd" />
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#238636" />
+            <stop offset="100%" stop-color="#2ea043" />
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8957e5" />
+            <stop offset="100%" stop-color="#a371f7" />
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d29922" />
+            <stop offset="100%" stop-color="#e3b341" />
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+        </filter>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3fb950" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#bc8cff" />
+        </marker>
+    </defs>
+    <style>
+        .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #f0f6fc; }
+        .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #8b949e; }
+        .node-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+        .node-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
+        .badge-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; font-weight: 600; }
+        .tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10.5px; fill: #79c0ff; font-weight: 500; }
+    </style>
+
+    <rect width="840" height="340" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+    <text x="30" y="38" class="title">Dual System-1 Decision Judge (Laya ONNX + Cloud Jev)</text>
+    <text x="30" y="58" class="subtitle">Sub-100ms Calibrated Decision Making &amp; SOW Quality Governance</text>
+
+    <!-- Left Box: Inputs -->
+    <g filter="url(#shadow)">
+        <rect x="30" y="95" width="200" height="205" rx="8" fill="url(#cardGrad)" stroke="#30363d" />
+        <text x="45" y="125" class="node-title">Judge Inputs</text>
+        <text x="45" y="155" class="node-desc">• SOW Requirements</text>
+        <text x="45" y="175" class="node-desc">• Retrieved RAG Facts</text>
+        <text x="45" y="195" class="node-desc">• Verified Discovery Docs</text>
+        <text x="45" y="215" class="node-desc">• Domain Rules &amp; Certs</text>
+        <rect x="45" y="240" width="170" height="40" rx="4" fill="#0d1117" stroke="#30363d" />
+        <text x="55" y="258" class="tag">REST API: /judge</text>
+        <text x="55" y="271" class="node-desc">Port 8787 Proxy Service</text>
+    </g>
+
+    <line x1="230" y1="195" x2="280" y2="195" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- Center Box: Dual Model Architecture -->
+    <g filter="url(#shadow)">
+        <rect x="285" y="85" width="270" height="225" rx="8" fill="url(#cardGrad)" stroke="#8957e5" stroke-width="1.5" />
+        <text x="300" y="115" class="node-title">Decision Judge Router</text>
+
+        <rect x="300" y="130" width="240" height="65" rx="6" fill="#0d1117" stroke="#1f6feb" />
+        <text x="312" y="150" fill="#58a6ff" class="node-title">Local ONNX Decision v1</text>
+        <text x="312" y="167" class="node-desc">convaiinnovations/laya (ModernBERT)</text>
+        <text x="312" y="182" class="node-desc">Zero external API dependencies</text>
+
+        <rect x="300" y="205" width="240" height="65" rx="6" fill="#0d1117" stroke="#2ea043" />
+        <text x="312" y="225" fill="#3fb950" class="node-title">Cloud Jev Judge (OpenRouter)</text>
+        <text x="312" y="242" class="node-desc">Gemini 2.5 Flash / GPT-4o-mini</text>
+        <text x="312" y="257" class="node-desc">Extended reasoning &amp; cross-lingual</text>
+    </g>
+
+    <line x1="555" y1="195" x2="605" y2="195" stroke="#bc8cff" stroke-width="2" marker-end="url(#arrowPurple)" />
+
+    <!-- Right Box: Criteria & Outputs -->
+    <g filter="url(#shadow)">
+        <rect x="610" y="95" width="200" height="205" rx="8" fill="url(#cardGrad)" stroke="#2ea043" />
+        <text x="625" y="125" class="node-title">Evaluation Output</text>
+        <text x="625" y="155" class="node-desc">• <tspan fill="#3fb950" font-weight="600">Faithfulness:</tspan> P(supported)</text>
+        <text x="625" y="175" class="node-desc">• <tspan fill="#3fb950" font-weight="600">Coverage:</tspan> P(covered)</text>
+        <text x="625" y="195" class="node-desc">• <tspan fill="#3fb950" font-weight="600">Clarity:</tspan> Actionable logic</text>
+        <text x="625" y="215" class="node-desc">• Overall Accuracy (0-100)</text>
+        <rect x="625" y="240" width="170" height="40" rx="4" fill="#0d1117" stroke="#30363d" />
+        <text x="635" y="258" fill="#3fb950" class="tag">Calibrated Confidence</text>
+        <text x="635" y="271" class="node-desc">G-Eval Style Rubric</text>
+    </g>
+</svg>

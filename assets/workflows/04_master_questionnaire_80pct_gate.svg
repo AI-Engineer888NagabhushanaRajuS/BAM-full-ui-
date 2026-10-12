@@ -1,0 +1,109 @@
+<svg width="880" height="370" viewBox="0 0 880 370" xmlns="http://www.w3.org/2000/svg">
+    
+    <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0b0f17" />
+            <stop offset="100%" stop-color="#111827" />
+        </linearGradient>
+        <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#161f30" />
+            <stop offset="100%" stop-color="#1a253a" />
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1f6feb" />
+            <stop offset="100%" stop-color="#388bfd" />
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#238636" />
+            <stop offset="100%" stop-color="#2ea043" />
+        </linearGradient>
+        <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8957e5" />
+            <stop offset="100%" stop-color="#a371f7" />
+        </linearGradient>
+        <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#d29922" />
+            <stop offset="100%" stop-color="#e3b341" />
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+        </filter>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3fb950" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#bc8cff" />
+        </marker>
+    </defs>
+    <style>
+        .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #f0f6fc; }
+        .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #8b949e; }
+        .node-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+        .node-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
+        .badge-text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; font-weight: 600; }
+        .tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10.5px; fill: #79c0ff; font-weight: 500; }
+    </style>
+
+    <rect width="880" height="370" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+    <text x="30" y="38" class="title">Master Questionnaire Battery &amp; 80% Context Sufficiency Gate</text>
+    <text x="30" y="58" class="subtitle">Stage 2.3 Pre-Flight Cockpit: Strict Guardrail Unlocking Stage 3.1 SOW Synthesis</text>
+
+    <!-- Column 1: Master Questionnaire -->
+    <g filter="url(#shadow)">
+        <rect x="30" y="90" width="240" height="245" rx="8" fill="url(#cardGrad)" stroke="#388bfd" />
+        <text x="45" y="118" class="node-title">1. Master Questionnaire</text>
+        <text x="45" y="138" class="node-desc">8 Excel Master baseline checks:</text>
+        <text x="45" y="156" class="node-desc">• 17-4PH housing cert requirement</text>
+        <text x="45" y="172" class="node-desc">• MPW-4421 tolerances &amp; Ra 0.8µm</text>
+        <text x="45" y="188" class="node-desc">• BOM Rev C delta reconciliation</text>
+        <text x="45" y="204" class="node-desc">• Net 45 commercial &amp; packaging</text>
+        <text x="45" y="220" class="node-desc">• BU-AERO-01 ITAR/AS9100D certs</text>
+        <text x="45" y="236" class="node-desc">• PCBA costing &amp; scrap rates</text>
+        <text x="45" y="252" class="node-desc">• FastMCP Agent responsibilities</text>
+        <text x="45" y="268" class="node-desc">• ISATVON 1.4 loop bounds</text>
+        <rect x="45" y="285" width="210" height="32" rx="4" fill="#0d1117" stroke="#30363d" />
+        <text x="55" y="305" class="tag">+ Add Custom Client Question</text>
+    </g>
+
+    <line x1="270" y1="210" x2="310" y2="210" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" />
+
+    <!-- Column 2: Test the Cognee Engine -->
+    <g filter="url(#shadow)">
+        <rect x="315" y="90" width="240" height="245" rx="8" fill="url(#cardGrad)" stroke="#8957e5" />
+        <text x="330" y="118" class="node-title">2. "Test the Cognee" Battery</text>
+        <rect x="330" y="135" width="210" height="42" rx="6" fill="#0d1117" stroke="#8957e5" />
+        <text x="340" y="153" fill="#bc8cff" class="node-title">⚡ Query Context Graph</text>
+        <text x="340" y="168" class="node-desc">GraphRAG + OKF triples traversal</text>
+
+        <rect x="330" y="190" width="210" height="42" rx="6" fill="#0d1117" stroke="#388bfd" />
+        <text x="340" y="208" fill="#58a6ff" class="node-title">⚖ Laya / Jev Evaluation</text>
+        <text x="340" y="223" class="node-desc">P(supported) &amp; P(covered) check</text>
+
+        <rect x="330" y="245" width="210" height="70" rx="6" fill="#0d1117" stroke="#30363d" />
+        <text x="340" y="265" class="tag">Sufficiency Gauge Meter:</text>
+        <text x="340" y="283" class="node-desc">Initial: 0% (Pending Evaluation)</text>
+        <text x="340" y="300" fill="#3fb950" class="node-desc">Tested: 100% (All Checks Pass)</text>
+    </g>
+
+    <line x1="555" y1="210" x2="595" y2="210" stroke="#bc8cff" stroke-width="2" marker-end="url(#arrowPurple)" />
+
+    <!-- Column 3: The 80% Gate Decision -->
+    <g filter="url(#shadow)">
+        <rect x="600" y="90" width="250" height="245" rx="8" fill="url(#cardGrad)" stroke="#2ea043" />
+        <text x="615" y="118" class="node-title">3. The 80% Gate Decision</text>
+
+        <rect x="615" y="135" width="220" height="65" rx="6" fill="#0d1117" stroke="#d29922" />
+        <text x="625" y="155" fill="#e3b341" class="node-title">Pass Rate &lt; 80%</text>
+        <text x="625" y="172" class="node-desc">🔒 SOW Gated (Disabled Button)</text>
+        <text x="625" y="187" class="node-desc">Blocks unverified synthesis</text>
+
+        <rect x="615" y="215" width="220" height="95" rx="6" fill="#0d1117" stroke="#2ea043" />
+        <text x="625" y="235" fill="#3fb950" class="node-title">Pass Rate &gt;= 80%</text>
+        <text x="625" y="252" class="node-desc">🔓 Push to SOW (Stage 3.1) Unlocked</text>
+        <text x="625" y="268" class="node-desc">Transfers verified facts &amp; FDE</text>
+        <text x="625" y="284" class="node-desc">directives to dynamic generator</text>
+    </g>
+</svg>

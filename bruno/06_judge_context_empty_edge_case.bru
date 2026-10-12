@@ -1,0 +1,27 @@
+meta {
+  name: Judge Context - Empty Boundary Edge Case
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/judge-context
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sources": [],
+    "facts": []
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.verdict: eq insufficient
+}
