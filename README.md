@@ -44,24 +44,24 @@ flowchart LR
         A["FDE Scope Directives\n(Voice / Text)"] --> B["Dual Threat Perimeter\n(ClamAV + Repel Shield)"]
         B --> C{"Twin Verdict\nGate"}
         C -->|Unanimous Clean| D["Released to Clean S3"]
-        C -->|Threat / Outage| Q["Air-Gapped Quarantine"]
+        C -->|Threat or Outage| Q["Air-Gapped Quarantine"]
     end
 
     subgraph S2["Stage 2.1-2.3: GraphRAG & Pre-Flight"]
         D --> E["Cognee Ingestion\n& OKF v0.2 Graph"]
         E --> F["Master Questionnaire\n(8 Master Checks + Custom)"]
         F --> G["Test the Cognee\n(Laya / GraphRAG)"]
-        G --> H{"Sufficiency Gate\n>= 80%?"}
+        G --> H{"Sufficiency Gate\nThreshold: 80%"}
     end
 
     subgraph S3["Stage 3.1-3.2: SOW & ISATVON"]
-        H -->|Passed (>= 80%)| I["Dynamic SOW Engine\n(FDE Goals + CAD + BOM)"]
+        H -->|Passed: 80% or More| I["Dynamic SOW Engine\n(FDE Goals + CAD + BOM)"]
         I --> J["TipTap Editor Review\n& Approval Freeze"]
         J --> K["ISATVON 1.4 Contract\nClustering (7 Fields)"]
     end
 
     subgraph S4["Stage 4.1-4.4: Execution & Sandboxing"]
-        K --> L["Temporal Validation\nActivities A -> D"]
+        K --> L["Temporal Validation\nActivities A to D"]
         L --> M["CubeSandbox MicroVM\n& Promptfoo Assertions"]
         M --> N["Commit to BAM_db\n& Deploy to Staging"]
     end
@@ -173,9 +173,9 @@ flowchart TD
     G --> L["Laya / Jev Judge Evaluation\nP(supported) & P(covered)"]
     L --> M["Context Sufficiency Meter (%)"]
 
-    M --> D{"Sufficiency >= 80%?"}
-    D -->|No (< 80%)| GATED["🔒 SOW Generation Gated\n(Push Button Disabled)"]
-    D -->|Yes (>= 80%)| PASS["🔓 Push to SOW (Stage 3.1) Unlocked\n(Context Certified)"]
+    M --> D{"Sufficiency Gate"}
+    D -->|Under 80%: Locked| GATED["🔒 SOW Generation Gated\n(Push Button Disabled)"]
+    D -->|80% or Higher: Certified| PASS["🔓 Push to SOW (Stage 3.1) Unlocked\n(Context Certified)"]
 ```
 
 * **Master Questionnaire & Battery**:
@@ -215,8 +215,8 @@ flowchart TD
         F2["2. Released Discovery Files (ClamAV + Repel clean)"]
         F3["3. CAD STEP Tolerances (±0.05mm bore, Ra 0.8µm)"]
         F4["4. BOM Rev C Delta (17-4PH housing, EN 10204 3.1)"]
-        F5["5. Rules & Costing ($120/hr SMT, 1.5% scrap, =SUM)"]
-        F6["6. Verified Pre-Flight Checks (>= 80% Gate)"]
+        F5["5. Rules & Costing (120 USD/hr SMT, 1.5% scrap, SUM formula)"]
+        F6["6. Verified Pre-Flight Checks (80% Sufficiency Gate)"]
     end
 
     Feeds --> ENG["Synthesis Engine\nproduceDynamicSowHtml()"]
@@ -271,7 +271,7 @@ flowchart TD
         WF --> ACT_A["Activity A: ISATVON Contract Validation"]
         ACT_A --> ACT_B["Activity B: Tech Stack Registry Check"]
         ACT_B --> ACT_C["Activity C: AST Code Generation (skill.py.j2)"]
-        ACT_C -->|SyntaxError on =Formula| ACT_D["Activity D: Self-Healing Fallback (Quotes Formulas)"]
+        ACT_C -->|Formula Syntax Error| ACT_D["Activity D: Self-Healing Fallback (Quotes Formulas)"]
         ACT_D --> ACT_C
     end
 
@@ -308,7 +308,7 @@ flowchart LR
     ROUTER --> ONNX["Local ONNX Decision v1\n(convaiinnovations/laya, ModernBERT fp32)\nSub-100ms Inference, Zero External API"]
     ROUTER --> CLOUD["Cloud Jev Judge\n(OpenRouter: Gemini 2.5 Flash / GPT-4o-mini)\nExtended Reasoning & Cross-Lingual"]
 
-    ONNX --> OUT["Calibrated Metrics:\n• Faithfulness: P(supported)\n• Coverage: P(covered)\n• Clarity: Actionable Logic"]
+    ONNX --> OUT["Calibrated Metrics:\n- Faithfulness: P(supported)\n- Coverage: P(covered)\n- Clarity: Actionable Logic"]
     CLOUD --> OUT
 ```
 
@@ -383,6 +383,31 @@ pytest tests/ -v
 # Records full end-to-end interactive demo strictly to F:\UI-SBAM\recordings\demo.webm
 python record_demo.py
 ```
+
+---
+
+## 🤖 Direct AI Agent Bootstrap Prompt
+
+> **Short, broken-English, high-density prompt for Claude, Gemini, or any LLM agent. No filler words, pure architecture context:**
+
+```text
+act as senior autonomous engineer on BAM (BuLLM Autonomous Manufacturing Workbench) at F:\UI-SBAM.
+full context & directives:
+- stack: react 19 vite ts, python 3.13 fastmcp, temporal, local laya-judge port 8787 (onnx modernbert fp32) + cloud openrouter gemini 2.5 flash.
+- stage 1.1 intake: fde goals multi-modal input (text/presets/native windows speech webkitSpeechRecognition). state lives in UiStore.fdeGoals & persistent localStorage('bam-fde-goals').
+- threat defense perimeter: dual-engine mandatory. tier-1 BuLL*Sav (ClamAV static sig/macro AST) + tier-2 Repel Shield (behavioral payload & prompt injection defense). fail-closed to quarantine if any fails. 6-node sequential flow animation (Flow 1/6 to 6/6).
+- stage 2.1-2.3 graphrag: cognee okf v0.2 knowledge graph. master questionnaire 8 baseline checks + custom fde q. strict >=80% context sufficiency gate required to unlock SOW handoff button. "Ask BullMind" terminal streams s3 citations & "+ Add to Master Questionnaire" promotes q live into 80% battery. 5 domain masters (org, rules/costing, agents, skills loopy, filetype matrix).
+- stage 3.1 dynamic sow: produceDynamicSowHtml() strictly dynamic. zero hardcoded mocks. synthesizes fde goals + cad step bore/tolerance + bom rev c delta 17-4ph + rules ($120/hr smt, scrap factor, =SUM formulas) + hitl approval freeze + tiptap editor diffing.
+- stage 3.2-4.4 isatvon 1.4: 7 fields (I,S,A,T,V,O,N). loopy bounded execution (max_iter: 3, budget: 5000ms). temporal workflow activities A->D. activity D self-heals by quoting raw spreadsheet formulas if ast syntax error occurs. CubeSandbox microvm & promptfoo verification.
+- rules: keep api keys safe in local .env, never delete user files, verify with npm test (46/46 passed) & pytest tests/ (31/31 passed).
+```
+
+---
+
+## 👥 Authors & Contributors
+
+* **Nagabhushana Raju S** ([@AI-Engineer888NagabhushanaRajuS](https://github.com/AI-Engineer888NagabhushanaRajuS)) — Lead AI Engineer & Architect
+* **Parvitha C Gowda** ([@ParvithaCGowda29](https://github.com/ParvithaCGowda29) · `parvitha.c@digibull.ai`) — Contributor
 
 ---
 
