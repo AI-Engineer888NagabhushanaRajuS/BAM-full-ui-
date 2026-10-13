@@ -1,13 +1,13 @@
-// 1.1 Intake console: upload & virus scan. Files are staged in quarantine and scanned; only released, Verified
-// files can enter RAG, and only through "Start ingestion run". Every scan state comes from the backend snapshot;
-// the eligibility rule is the same pure check the backend enforces (api/scanGate.ts).
-// Every selection (browse, drop, many files, folder, ZIP) is triaged first: incompatible files are filtered out,
-// then the user chooses what fits the batch (25 files, 250 MB) before Upload turns on.
+// 1.1 Intake console: Three-pane workbench data ingestion & BuLL*Sav zero-trust defense.
+// Left: Context, Stepper & Source Documents.
+// Center: Intake Assistant, FDE Directives (Text & Native Voice) & Dropzone.
+// Right: Readiness Checklist, Sufficiency Metrics, BuLL*Sav Core & Ingestion Gate.
+
 import { useEffect, useRef, useState } from 'react'
 import { useUppyState } from '@uppy/react'
 import { api } from '../api/adapter'
 import type { ScanOutcome } from '../api/adapter'
-import { ACCEPTED_TYPES, AV_NAME, AV_VENDOR, REPEL_NAME, REPEL_VENDOR, CHUNK_BYTES, chunkCount, MAX_BATCH_BYTES, MAX_BATCH_FILES, MAX_UPLOAD_BYTES, type ScanEvent, type Snapshot, type UploadRecord } from '../api/types'
+import { ACCEPTED_TYPES, AV_NAME, CHUNK_BYTES, chunkCount, MAX_BATCH_BYTES, MAX_BATCH_FILES, MAX_UPLOAD_BYTES, type ScanEvent, type Snapshot, type UploadRecord } from '../api/types'
 import { autoPick, chunkNames, fit, ingestionBlock, scanView, triage, MAX_MULTI_BATCH_FILES, MAX_MULTI_BATCH_BYTES, type ScanAction, type Triage } from '../api/scanGate.ts'
 import type { StepProps } from '../App'
 import { useAction } from '../lib/data'
@@ -15,8 +15,6 @@ import { setUi, toast, uploadFiles, uppy, useUi } from '../lib/store'
 import { goScreen } from '../lib/route'
 import { DEMO_RUN, demoControls } from '../lib/demo'
 import { isRunning, ragPipeline, useRag } from '../rag/ragPipeline.ts'
-import { PipelineCard } from '../rag/RagScreens'
-import { JevVisionHUD } from '../components/JevVisionHUD'
 import { buildOkfBundle } from '../rag/okf.ts'
 import { useUploadsInFlight } from '../components/shell'
 import { Dialog, Empty, GateButton, Icon, StatusPill, Time, fmtBytes } from '../components/ui'
@@ -28,27 +26,26 @@ type Source = 'files' | 'folder' | 'zip' | 'drop'
 
 const HOWTO: { key: Exclude<Source, 'drop'>; icon: string; title: string; button: string; steps: string[] }[] = [
   { key: 'files', icon: 'file', title: 'Many files', button: 'Choose files', steps: [
-    'In the file picker, press Ctrl+A (Cmd+A on Mac) for everything, or Ctrl/Cmd-click and Shift-click to pick several.',
-    `Up to ${MAX_BATCH_FILES} files and ${MB(MAX_BATCH_BYTES)} per batch. Files over ${MB(CHUNK_BYTES)} are sent automatically in ${MB(CHUNK_BYTES)} chunks.`,
+    'In the file picker, select multiple documents with Ctrl/Cmd or Shift-click.',
+    `Up to ${MAX_BATCH_FILES} files and ${MB(MAX_BATCH_BYTES)} per batch. Files over ${MB(CHUNK_BYTES)} are chunked automatically.`,
   ] },
   { key: 'folder', icon: 'expand', title: 'A whole folder', button: 'Choose folder', steps: [
-    'Every file inside, including subfolders, is checked before anything uploads.',
-    'System files (.DS_Store, Thumbs.db, desktop.ini, ~$ temp files) are skipped.',
-    `More than ${MAX_BATCH_FILES} files? Upload one subfolder at a time, or ZIP related documents together.`,
+    'Every file inside subfolders is checked before uploading.',
+    'System files (.DS_Store, Thumbs.db, desktop.ini) are skipped automatically.',
+    `Upload subfolders sequentially or ZIP related files together.`,
   ] },
   { key: 'zip', icon: 'db', title: 'ZIP archive', button: 'Choose ZIP', steps: [
-    'Windows: select the files, right-click, Send to, Compressed (zipped) folder.',
-    'macOS: select the files, right-click, Compress.',
-    `A ZIP counts as one file and can use the whole ${MB(MAX_UPLOAD_BYTES)} batch (sent in ${MB(CHUNK_BYTES)} chunks). It is scanned as an archive; password-protected ZIPs cannot be scanned.`,
+    'Compressed archives are unpacked and inspected in quarantine.',
+    `A ZIP can use the whole ${MB(MAX_UPLOAD_BYTES)} batch quota.`,
   ] },
 ]
-/** Native pickers: the browser builds the file list; nothing reaches the uploader until it passes triage and fits the batch. */
-function Picker({ source, onPick, children, disabled, className = 'btn btn-secondary sm' }: {
-  source: Exclude<Source, 'drop'>; onPick: (l: FileList, s: Source) => void; children: React.ReactNode; disabled?: boolean; className?: string
+
+function Picker({ source, onPick, children, disabled, className = 'btn btn-secondary sm', style }: {
+  source: Exclude<Source, 'drop'>; onPick: (l: FileList, s: Source) => void; children: React.ReactNode; disabled?: boolean; className?: string; style?: React.CSSProperties
 }) {
   const input = useRef<HTMLInputElement | null>(null)
   return <>
-    <button type="button" className={className} disabled={disabled} onClick={() => input.current?.click()}>{children}</button>
+    <button type="button" className={className} style={style} disabled={disabled} onClick={() => input.current?.click()}>{children}</button>
     <input ref={el => { input.current = el; if (el && source === 'folder') el.setAttribute('webkitdirectory', '') }} type="file" hidden
       multiple={source !== 'zip' || undefined} accept={source === 'zip' ? '.zip' : source === 'files' ? ACCEPTED_TYPES.join(',') : undefined}
       onChange={e => { if (e.target.files) onPick(e.target.files, source); e.target.value = '' }} />
@@ -59,7 +56,7 @@ function BulkDialog({ open, onClose, onPick }: { open: boolean; onClose: () => v
   return (
     <Dialog open={open} title="Bulk upload" onClose={onClose} className="dialog wide"
       footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}>
-      <p className="muted sm">Pick as much as you like: incompatible files are filtered out first, then you choose what goes into this batch ({TYPES_LABEL}; up to {MAX_BATCH_FILES} files and {MB(MAX_BATCH_BYTES)}). Files over {MB(CHUNK_BYTES)} are sent as {MB(CHUNK_BYTES)} chunks. Everything is quarantined and virus-scanned before anything else.</p>
+      <p className="muted sm">Select files, folders, or archives. Incompatible files are filtered out automatically before entering quarantine.</p>
       <div className="howto">
         {HOWTO.map(h => (
           <section key={h.key} className="howto-card">
@@ -69,30 +66,27 @@ function BulkDialog({ open, onClose, onPick }: { open: boolean; onClose: () => v
           </section>
         ))}
       </div>
-      <p className="faint xs"><Icon name="question" size={11} /> Name files so they explain themselves (for example "RFQ-0147 Requirements v2.pdf"), one topic per file: extraction in RAG works better.</p>
     </Dialog>
   )
 }
 
 export interface Review { source: Source; t: Triage<File> }
 type Existing = { count: number; bytes: number }
-// ponytail: renders the first 400 usable files; a bigger folder should be narrowed before picking.
 const LIST_CAP = 400
 
-// Uppy-style file tiles: a coloured preview per type, shrinking as the selection grows.
 const FILE_TYPES: Record<string, { label: string; color: string }> = {
   '.pdf': { label: 'PDF', color: '#E2514A' }, '.docx': { label: 'DOCX', color: '#2B579A' }, '.xlsx': { label: 'XLSX', color: '#217346' },
   '.pptx': { label: 'PPTX', color: '#D24726' }, '.txt': { label: 'TXT', color: '#5A5E69' }, '.zip': { label: 'ZIP', color: '#00A88E' },
+  '.step': { label: 'CAD', color: '#8b5cf6' }, '.stp': { label: 'CAD', color: '#8b5cf6' },
 }
 const fileType = (name: string) => FILE_TYPES[name.slice(name.lastIndexOf('.')).toLowerCase()] ?? { label: 'FILE', color: '#7B8BA3' }
 const tileSize = (n: number) => (n <= 5 ? 150 : n <= 12 ? 104 : n <= 24 ? 92 : n <= 48 ? 80 : 70)
 
-/** Staged review: what was filtered out, what is usable, and a choice that must fit the batch before Upload turns on. */
 function ReviewDialog({ review, existing, onClose, onUpload }: { review?: Review; existing: Existing; onClose: () => void; onUpload: (files: File[]) => void }) {
   const t = review?.t
   const [chosen, setChosen] = useState<Set<File>>(new Set())
   const [shown, setShown] = useState<Review>()
-  if (review !== shown) { // new selection: preselect everything if it fits single or multi-batch
+  if (review !== shown) {
     setShown(review)
     setChosen(new Set(t && fit(t.usable, existing, { allowMultiBatch: true }).ok ? t.usable : []))
   }
@@ -110,77 +104,37 @@ function ReviewDialog({ review, existing, onClose, onUpload }: { review?: Review
       footer={<>
         <span className={`review-reason ${f.ok ? 'tone-ok' : ''}`}>
           <Icon name={f.ok ? 'check' : 'lock'} size={12} />
-          {f.ok
-            ? (f.multiBatch ? `Fits across ${f.batchCount} batch waves (up to 9 allowed). Ready to stream.` : 'Fits the batch. Ready to upload.')
-            : f.reason}
+          {f.ok ? (f.multiBatch ? `Fits across ${f.batchCount} batch waves. Ready to stream.` : 'Fits the batch. Ready to upload.') : f.reason}
         </span>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
         <button className={`btn ${f.ok ? 'btn-ok' : 'btn-primary'}`} disabled={!f.ok} onClick={() => onUpload(picked)}>
           <Icon name="upload" />
-          {f.multiBatch
-            ? `Upload across ${f.batchCount} batch waves (${f.count} files · ${fmtBytes(f.bytes)})`
-            : `Upload ${f.count || ''} file${f.count === 1 ? '' : 's'}${f.count ? ` · ${fmtBytes(f.bytes)}` : ''}`
-          }
+          {f.multiBatch ? `Upload ${f.count} files across ${f.batchCount} waves` : `Upload ${f.count || ''} files`}
         </button>
       </>}>
       <ol className="funnel" aria-label="Selection funnel">
         <li><span className="funnel-n">{t.total.toLocaleString()}</span><span className="funnel-l">selected</span></li>
-        <li className={t.usable.length ? 'is-ok' : 'is-err'}><span className="funnel-n">{t.usable.length.toLocaleString()}</span><span className="funnel-l">compatible</span>{excluded > 0 && <span className="funnel-sub">{excluded.toLocaleString()} filtered out</span>}</li>
-        <li className={f.ok ? 'is-ok' : f.count ? 'is-err' : ''}><span className="funnel-n">{f.count}</span><span className="funnel-l">{f.multiBatch ? `chosen across ${f.batchCount} waves` : 'chosen for this batch'}</span></li>
+        <li className={t.usable.length ? 'is-ok' : 'is-err'}><span className="funnel-n">{t.usable.length.toLocaleString()}</span><span className="funnel-l">compatible</span></li>
+        <li className={f.ok ? 'is-ok' : f.count ? 'is-err' : ''}><span className="funnel-n">{f.count}</span><span className="funnel-l">{f.multiBatch ? `across ${f.batchCount} waves` : 'for batch'}</span></li>
       </ol>
-      {f.multiBatch && (
-        <div className="multi-batch-card" style={{ margin: '8px 0 12px 0' }}>
-          <div className="multi-batch-badge">
-            <Icon name="bolt" size={13} />
-            <span>Smart Multi-Batch Wave Streaming ({f.batchCount} Waves)</span>
-          </div>
-          <p className="sm" style={{ margin: '4px 0 0 0', color: 'var(--text-sub)' }}>
-            You selected <strong>{f.count} files</strong> ({fmtBytes(f.bytes)}). Because this exceeds a single batch limit of 25 files, Jev &amp; Laya will automatically partition and ingest them in <strong>{f.batchCount} sequential waves</strong> of up to 25 files each, running virus scans &amp; context sufficiency checks in real-time.
-          </p>
-        </div>
-      )}
-      <p className="review-lead">
-        {t.usable.length === 0 ? <>None of the {t.total.toLocaleString()} file{t.total === 1 ? '' : 's'} can be uploaded. Accepted types: {TYPES_LABEL}.</>
-          : <>Out of <strong>{t.total.toLocaleString()}</strong> file{t.total === 1 ? '' : 's'}, <strong>{t.usable.length.toLocaleString()}</strong> {t.usable.length === 1 ? 'is' : 'are'} usable.{' '}
-            {fit(t.usable, existing, { allowMultiBatch: true }).ok
-              ? (f.multiBatch ? `Ready to stream across ${f.batchCount} waves.` : 'All of them fit this batch.')
-              : `Choose the important ones: up to ${Math.max(f.roomFiles, 0)} files and ${MB(Math.max(f.roomBytes, 0))}.`}</>}
-      </p>
-      {t.usable.length > 0 && <>
-        <div className="meters">
-          <div className={`meter ${over(f.count, maxRoomFiles)}`}>
-            <span className="meter-l">Files</span>
-            <span className="meter-bar"><span style={{ width: `${pctFiles}%` }} /></span>
-            <span className="meter-n">{f.count} / {f.multiBatch ? `${MAX_MULTI_BATCH_FILES} (9 waves max)` : Math.max(f.roomFiles, 0)}</span>
-          </div>
-          <div className={`meter ${over(f.bytes, maxRoomBytes)}`}>
-            <span className="meter-l">Size</span>
-            <span className="meter-bar"><span style={{ width: `${pctBytes}%` }} /></span>
-            <span className="meter-n">{fmtBytes(f.bytes)} / {f.multiBatch ? `${fmtBytes(MAX_MULTI_BATCH_BYTES)} (9 waves)` : MB(Math.max(f.roomBytes, 0))}</span>
-          </div>
-        </div>
-        <div className="tile-panel">
+      {t.usable.length > 0 && (
+        <div className="tile-panel" style={{ marginTop: '12px' }}>
           <div className="tile-bar">
             <button className="link sm" onClick={() => setChosen(new Set())}>Clear</button>
-            <strong className="tile-bar-title">{f.count} of {t.usable.length.toLocaleString()} file{t.usable.length === 1 ? '' : 's'} selected</strong>
-            <span className="row">
-              <button className="link sm" onClick={() => setChosen(new Set(t.usable))}>Select all</button>
-              <button className="link sm" onClick={() => setChosen(new Set(autoPick(t.usable, existing)))}><Icon name="bolt" size={12} />Auto-select what fits</button>
-            </span>
+            <strong className="tile-bar-title">{f.count} of {t.usable.length.toLocaleString()} selected</strong>
+            <button className="link sm" onClick={() => setChosen(new Set(t.usable))}>Select all</button>
           </div>
           <ul className="tile-grid" style={{ '--tile': `${tileSize(Math.min(t.usable.length, LIST_CAP))}px` } as React.CSSProperties}>
             {t.usable.slice(0, LIST_CAP).map(file => {
-              const parts = chunkNames(file.name, file.size)
               const on = chosen.has(file)
               const ft = fileType(file.name)
               return (
-                <li key={`${file.webkitRelativePath || file.name}-${file.size}-${file.lastModified}`} className={`tile ${on ? 'on' : ''}`}>
-                  <label title={`${file.webkitRelativePath || file.name}${parts.length ? `\nSent as ${parts.length} chunks:\n${parts.join('\n')}` : ''}`}>
+                <li key={`${file.name}-${file.size}`} className={`tile ${on ? 'on' : ''}`}>
+                  <label>
                     <input type="checkbox" className="sr-only" checked={on} onChange={() => toggle(file)} />
                     <span className="tile-preview" style={{ '--ft': ft.color } as React.CSSProperties}>
                       <span className="tile-doc"><span className="tile-ext">{ft.label}</span></span>
-                      <span className="tile-check" aria-hidden="true">{on && <Icon name="check" size={11} />}</span>
-                      {parts.length > 0 && <span className="tile-chunks">{parts.length} chunks</span>}
+                      <span className="tile-check">{on && <Icon name="check" size={11} />}</span>
                     </span>
                     <span className="tile-name">{file.name}</span>
                     <span className="tile-size">{fmtBytes(file.size)}</span>
@@ -189,66 +143,50 @@ function ReviewDialog({ review, existing, onClose, onUpload }: { review?: Review
               )
             })}
           </ul>
-          {t.usable.length > LIST_CAP && <p className="muted xs tile-more">Showing {LIST_CAP} of {t.usable.length.toLocaleString()} usable files. Use Auto-select, or pick a smaller folder.</p>}
         </div>
-        {t.usable.some(x => x.size > CHUNK_BYTES) && <details className="excluded chunk-branches">
-          <summary><Icon name="upload" size={12} /> Chunk branches: files over {MB(CHUNK_BYTES)} are sent in {MB(CHUNK_BYTES)} parts</summary>
-          {t.usable.filter(x => x.size > CHUNK_BYTES).slice(0, 20).map(file => {
-            const parts = chunkNames(file.name, file.size)
-            return <div key={`${file.name}-${file.size}`} className="branch-file">
-              <span className="branch-root"><Icon name="file" size={12} />{file.name}<span className="muted">{fmtBytes(file.size)}</span></span>
-              <ul className="branch" aria-label={`${file.name} chunks`}>
-                {(parts.length > 4 ? [0, 1, 2, -1, parts.length - 1] : parts.map((_, i) => i)).map(i =>
-                  <li key={i}>{i < 0 ? <span className="muted">… {parts.length - 4} more</span>
-                    : <><span className="mono">{parts[i]}</span><span className="muted">{fmtBytes(Math.min(CHUNK_BYTES, file.size - i * CHUNK_BYTES))}</span></>}</li>)}
-              </ul>
-            </div>
-          })}
-        </details>}
-      </>}
-      {excluded > 0 && <details className="excluded">
-        <summary><Icon name="minus" size={12} /> Filtered out: {excluded.toLocaleString()} file{excluded === 1 ? '' : 's'} (never uploaded)</summary>
-        {t.byExt.length > 0 && <p><strong>{t.unsupported.length.toLocaleString()} unsupported type{t.unsupported.length === 1 ? '' : 's'}</strong> <span className="ext-chips">{t.byExt.slice(0, 12).map(([e, n]) => <span key={e} className="tag">{e} · {n.toLocaleString()}</span>)}{t.byExt.length > 12 && <span className="muted xs">+{t.byExt.length - 12} more types</span>}</span></p>}
-        {t.empty.length > 0 && <p><strong>{t.empty.length} empty</strong> <span className="muted">{t.empty.slice(0, 5).map(x => x.name).join(', ')}{t.empty.length > 5 ? '…' : ''}</span></p>}
-        {t.tooLarge.length > 0 && <p><strong>{t.tooLarge.length} over {MB(MAX_UPLOAD_BYTES)}</strong> <span className="muted">{t.tooLarge.slice(0, 5).map(x => `${x.name} (${fmtBytes(x.size)})`).join(', ')}. Split or compress them.</span></p>}
-        {t.system.length > 0 && <p><strong>{t.system.length} system files</strong> <span className="muted">(.DS_Store, Thumbs.db, ~$ temp files)</span></p>}
-        <p className="muted xs">Convert documents you need to {TYPES_LABEL} (for example, save as PDF) and pick them again.</p>
-      </details>}
+      )}
     </Dialog>
   )
 }
 
-function UploadZone({ closed, onPick, onBulk }: { closed?: string; onPick: (l: FileList, s: Source) => void; onBulk: () => void }) {
-  const [over, setOver] = useState(false)
+/** Architecture Workflow Modal triggered by [ ◫ Workflow ] button in header */
+function WorkflowModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <div className={`dropzone scan-drop ${over ? 'over' : ''} ${closed ? 'is-disabled' : ''}`}
-      onDragOver={e => { if (closed) return; e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)}
-      onDrop={e => { e.preventDefault(); setOver(false); if (!closed) onPick(e.dataTransfer.files, 'drop') }}>
-      <span className="scan-drop-icon"><Icon name="upload" size={20} /></span>
-      <div className="scan-drop-text">
-        <strong>Drag and drop files here</strong>
-        <span>or browse to upload discovery documents</span>
-        <span className="faint xs">{TYPES_LABEL} · up to {MAX_BATCH_FILES} files / {MB(MAX_BATCH_BYTES)} per batch · files over {MB(CHUNK_BYTES)} upload in {MB(CHUNK_BYTES)} chunks</span>
-        {closed && <span className="gate-reason"><Icon name="lock" size={12} />{closed}</span>}
+    <Dialog open={open} title="BAM Architecture & Zero-Trust Ingestion Flow" onClose={onClose} className="dialog wide"
+      footer={<button className="btn btn-primary sm" onClick={onClose}>Close</button>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+        <p className="sm muted" style={{ alignSelf: 'flex-start', margin: 0 }}>
+          End-to-end data lifecycle: Multi-Modal FDE Directives $\rightarrow$ BuLL*Sav Zero-Trust Perimeter $\rightarrow$ Cognee GraphRAG $\rightarrow$ 80% Sufficiency Gate $\rightarrow$ Dynamic SOW $\rightarrow$ ISATVON 1.4 Temporal Execution.
+        </p>
+        <img
+          src="assets/workflows/01_end_to_end_architecture.svg"
+          alt="BAM Architecture Workflow"
+          style={{ width: '100%', maxHeight: '520px', borderRadius: '8px', border: '1px solid var(--border)' }}
+        />
       </div>
-      <div className="scan-drop-actions">
-        <Picker source="files" onPick={onPick} disabled={!!closed} className="btn btn-primary"><Icon name="upload" />Browse files</Picker>
-        <button className="btn btn-secondary" disabled={!!closed} onClick={onBulk}>Bulk upload<Icon name="chevron" size={12} /></button>
-      </div>
-    </div>
+    </Dialog>
   )
 }
 
-/** 1.1 FDE Goals & Scope Directives before file upload. Supports typing and native Windows speech recognition. */
-function FdeGoalsSection() {
+/** 1.1 Intake console with Three-Pane Workbench */
+export function Intake({ snap, info }: StepProps) {
+  const rag = useRag(s => s)
+  const uploading = useUploadsInFlight()
+  const uploadErrors = useUppyState(uppy, s => Object.values(s.files).filter(f => f.error).length)
+  const { busy, run } = useAction()
+  const startingRef = useRef(false)
+  const [outcome, setOutcome] = useState<ScanOutcome>('clean')
+  const [showWorkflow, setShowWorkflow] = useState(false)
+  const [showLogs, setShowLogs] = useState(false)
+  const [showSecurityDetails, setShowSecurityDetails] = useState(false)
+
+  // Directives state
   const fdeGoals = useUi(s => s.fdeGoals ?? '')
   const [goals, setGoals] = useState(fdeGoals)
   const [listening, setListening] = useState(false)
   const recognitionRef = useRef<any>(null)
 
-  useEffect(() => {
-    setGoals(fdeGoals)
-  }, [fdeGoals])
+  useEffect(() => { setGoals(fdeGoals) }, [fdeGoals])
 
   const saveGoals = (text: string) => {
     setGoals(text)
@@ -261,407 +199,57 @@ function FdeGoalsSection() {
       toast('Speech Recognition not supported in this browser. Please type your goals directly.', 'info')
       return
     }
-
     if (listening && recognitionRef.current) {
       recognitionRef.current.stop()
       setListening(false)
       return
     }
-
     try {
       const recognition = new SpeechRec()
       recognition.continuous = false
       recognition.interimResults = true
       recognition.lang = 'en-US'
-
       recognition.onstart = () => {
         setListening(true)
-        toast('Listening via Windows Voice-to-Text... Speak your intake goals.', 'info')
+        toast('Listening via Windows Speech... Dictate intake objectives.', 'info')
       }
-
       recognition.onresult = (e: any) => {
-        const transcript = Array.from(e.results)
-          .map((res: any) => (res as any)[0].transcript)
-          .join('')
+        const transcript = Array.from(e.results).map((res: any) => (res as any)[0].transcript).join('')
         if (e.results[0].isFinal) {
           const next = goals.trim() ? `${goals.trim()} ${transcript}` : transcript
           saveGoals(next)
           toast('Voice input transcribed.', 'success')
         }
       }
-
-      recognition.onerror = (e: any) => {
-        console.warn('Speech recognition error:', e.error)
-        setListening(false)
-        if (e.error !== 'no-speech') {
-          toast(`Voice input error: ${e.error}`, 'error')
-        }
-      }
-
-      recognition.onend = () => {
-        setListening(false)
-      }
-
+      recognition.onerror = () => { setListening(false) }
+      recognition.onend = () => { setListening(false) }
       recognitionRef.current = recognition
       recognition.start()
-    } catch (err) {
-      console.warn('Speech recognition start failed:', err)
+    } catch {
       setListening(false)
-      toast('Could not start microphone. Check browser permissions.', 'error')
+      toast('Could not start microphone.', 'error')
     }
   }
 
   const PRESETS = [
-    'Extract MPW parts & tolerances from CAD STEP with Ra 0.8µm finish',
-    'Verify 17-4PH material certs (EN 10204 3.1) and Spec QA-101 mill cert',
-    'Apply Tier-1 EMS SMT ($120/hr) and 1.5% scrap rates per Rules Master',
-    'Enforce ISATVON 1.4 bounded loop checks (max_iter: 3, budget: 5000ms)',
+    'Extract MPW parts & tolerances from CAD STEP with Ra 0.8µm',
+    'Verify 17-4PH material certs (EN 10204 3.1 & QA-101)',
+    'Apply Tier-1 EMS SMT ($120/hr) & 1.5% scrap rates',
+    'Enforce ISATVON 1.4 loop bounds (max_iter: 3, budget: 5s)',
   ]
 
-  return (
-    <section className="fde-goals-card" aria-labelledby="fde-goals-title">
-      <div className="fde-goals-header">
-        <div className="fde-goals-title-group">
-          <div className="fde-goals-tag"><Icon name="sparkle" size={11} /> Pre-Ingestion Directive</div>
-          <h3 id="fde-goals-title">FDE Intake Objectives &amp; Scope Directives</h3>
-          <p className="faint xs">
-            Declare what you are trying to accomplish before upload &amp; scan. Directives enrich Cognee GraphRAG and guide dynamic SOW synthesis.
-          </p>
-        </div>
-        <button
-          type="button"
-          className={`btn sm voice-mic-btn ${listening ? 'is-recording' : 'btn-secondary'}`}
-          onClick={toggleVoice}
-          title={listening ? 'Stop Windows speech recognition' : 'Use Windows native voice-to-text to dictate objectives'}
-        >
-          <span className={`voice-pulse-dot ${listening ? 'pulsing' : ''}`} />
-          <Icon name="bolt" size={12} />
-          <span>{listening ? 'Listening (Windows Speech)…' : 'Voice Dictate'}</span>
-        </button>
-      </div>
-
-      <div className="fde-goals-input-box">
-        <textarea
-          className="fde-goals-textarea"
-          rows={2}
-          value={goals}
-          onChange={e => saveGoals(e.target.value)}
-          placeholder="Type or dictate FDE objectives (e.g. Extract MPW-4421 tolerances from CAD STEP, verify 17-4PH material certs, apply Tier-1 EMS SMT rates, and enforce ISATVON 1.4 bounded loops)…"
-        />
-        {goals && (
-          <button
-            type="button"
-            className="fde-goals-clear"
-            onClick={() => saveGoals('')}
-            title="Clear objectives"
-          >
-            <Icon name="x" size={11} />
-          </button>
-        )}
-      </div>
-
-      <div className="fde-goals-presets">
-        <span className="muted xs">Quick directives:</span>
-        {PRESETS.map((p, i) => (
-          <button
-            key={i}
-            type="button"
-            className="prompt-chip"
-            onClick={() => {
-              const next = goals.includes(p) ? goals : goals.trim() ? `${goals.trim()}; ${p}` : p
-              saveGoals(next)
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-const FLOW_STAGES = [
-  { step: 1, label: 'Upload', icon: 'upload', desc: 'Flow 1/6: Streaming discovery files to air-gapped quarantine perimeter' },
-  { step: 2, label: 'Quarantine', icon: 'lock', desc: 'Flow 2/6: Air-gapped quarantine staging & SHA-256 fingerprinting' },
-  { step: 3, label: `${AV_NAME} (ClamAV)`, icon: 'shield', desc: 'Flow 3/6: ClamAV static MD5/SHA256 signature scan & macro AST inspection' },
-  { step: 4, label: `${REPEL_NAME}`, icon: 'shield', desc: 'Flow 4/6: Repel behavioral payload repulsion & prompt injection defense' },
-  { step: 5, label: 'Twin Verdict', icon: 'check', desc: 'Flow 5/6: Unanimous fail-closed consensus evaluation' },
-  { step: 6, label: 'Released', icon: 'bolt', desc: 'Flow 6/6: Twin-engine certified files admitted to BAM RAG pipeline' },
-]
-
-/** Live security pipeline for the batch: upload, quarantine, BuLL*Sav scan, verdict, release. Every count comes from real state. */
-function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
-  const files = useUppyState(uppy, s => s.files)
-  const list = Object.values(files)
-  const sending = list.filter(f => f.progress.uploadStarted && !f.progress.uploadComplete && !f.error)
-  const failed = list.filter(f => f.error)
-  const sendTotal = sending.reduce((n, f) => n + (f.size ?? 0), 0)
-  const chunked = sending.filter(f => chunkCount(f.size ?? 0) > 1)
-  const sendPct = sendTotal ? Math.round(sending.reduce((n, f) => n + (f.progress.bytesUploaded || 0), 0) / sendTotal * 100) : 0
-  const total = uploads.length
-  const pending = uploads.filter(u => u.scan === 'scanning' && !u.scanError)
-  const inScan = pending.filter(u => u.scanStartedAt)
-  const queued = pending.length - inScan.length
-  const blocked = uploads.filter(u => u.scan === 'blocked').length
-  const errors = uploads.filter(u => u.scanError).length
-  const clean = uploads.filter(u => u.scan === 'verified').length
-  const released = uploads.filter(u => u.released).length
-  const state = sending.length || pending.length ? 'scanning' : !total ? 'idle' : blocked ? 'threat' : errors ? 'error' : 'clear'
-  const s = (n: number) => (n === 1 ? '' : 's')
-
-  const [animatingStep, setAnimatingStep] = useState<number | null>(null)
-  const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevUploadsCount = useRef(uploads.length)
-
-  const runSequentialFlow = (targetStep = 1) => {
-    if (animationTimer.current) clearTimeout(animationTimer.current)
-    if (targetStep <= 6) {
-      setAnimatingStep(targetStep)
-      animationTimer.current = setTimeout(() => {
-        runSequentialFlow(targetStep + 1)
-      }, targetStep === 1 ? 650 : targetStep === 2 ? 750 : targetStep === 3 ? 850 : targetStep === 4 ? 800 : targetStep === 5 ? 700 : 800)
-    } else {
-      setAnimatingStep(null)
-    }
-  }
-
-  // Auto-trigger sequential animation when batch is loaded or uploads start
-  useEffect(() => {
-    if (uploads.length > 0 && prevUploadsCount.current === 0) {
-      runSequentialFlow(1)
-    }
-    prevUploadsCount.current = uploads.length
-    return () => {
-      if (animationTimer.current) clearTimeout(animationTimer.current)
-    }
-  }, [uploads.length])
-
-  // Expose runSequentialFlow globally for external triggers
-  useEffect(() => {
-    ;(window as any).__triggerAvFlow = () => runSequentialFlow(1)
-    return () => { delete (window as any).__triggerAvFlow }
-  }, [])
-
-  const isSimulating = animatingStep !== null
-  const currentStepInfo = isSimulating ? FLOW_STAGES[animatingStep - 1] : null
-
-  const [title, sub] = isSimulating
-    ? [
-        `Flow ${animatingStep}/6 Running: ${currentStepInfo?.label}`,
-        currentStepInfo?.desc ?? '',
-      ]
-    : {
-        idle: [`Dual Engines Ready: ${AV_NAME} & ${REPEL_NAME}`, 'Every upload is quarantined and evaluated by ClamAV and Repel before entering the BAM pipeline.'],
-        scanning: sending.length && !pending.length
-          ? [`Uploading ${sending.length} file${s(sending.length)} to quarantine · ${sendPct}%`, chunked.length ? `${chunked.length} large file${s(chunked.length)} sent in ${MB(CHUNK_BYTES)} chunks, 3 files at a time. Each file is scanned as soon as it lands.` : 'Up to 3 files at a time. Evaluated by ClamAV and Repel as soon as it lands in quarantine.']
-          : [`Twin-Engine Defense Running · ${total - pending.length} of ${total} inspected`, 'ClamAV signature inspection + Repel behavioral evasion check active. Files stay quarantined until both pass.'],
-        threat: [`${blocked} threat${s(blocked)} quarantined by security perimeter`, 'Blocked files cannot be opened or ingested. Remove them to continue.'],
-        error: [`${errors} scan${s(errors)} did not finish`, 'No verdict means not clean. Retry the scan or remove the file.'],
-        clear: [`All ${total} file${s(total)} clean (ClamAV & Repel Verified)`, 'Twin-engine security verified. Released to the BAM pipeline for ingestion.'],
-      }[state]
-
-  type St = 'idle' | 'active' | 'done' | 'alert'
-  const resolved = total > 0 && !pending.length
-
-  const nodes: { label: string; st: St; count: string; icon: string }[] = isSimulating
-    ? FLOW_STAGES.map((fs, idx) => {
-        const stepNum = idx + 1
-        const st: St = stepNum < animatingStep ? 'done' : stepNum === animatingStep ? 'active' : 'idle'
-        const count = stepNum < animatingStep ? 'Passed' : stepNum === animatingStep ? 'Running…' : 'Queued'
-        return { label: fs.label, icon: fs.icon, st, count }
-      })
-    : [
-        { label: 'Upload', icon: 'upload', st: sending.length ? 'active' : failed.length ? 'alert' : total ? 'done' : 'idle',
-          count: sending.length ? `${sendPct}%` : failed.length ? `${failed.length} failed` : total ? `${total} sent` : '—' },
-        { label: 'Quarantine', icon: 'lock', st: queued ? 'active' : total ? 'done' : 'idle', count: queued ? `${queued} waiting` : total ? `${total} held` : '—' },
-        { label: `${AV_NAME} (ClamAV)`, icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
-        { label: `${REPEL_NAME}`, icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
-        { label: 'Twin Verdict', icon: blocked ? 'alert' : 'check', st: blocked || errors ? 'alert' : resolved ? 'done' : clean ? 'active' : 'idle',
-          count: total ? `${clean} clean${blocked ? ` · ${blocked} blocked` : ''}` : '—' },
-        { label: 'Released', icon: 'bolt', st: released && released === total ? 'done' : released ? 'active' : 'idle', count: total ? `${released} of ${total}` : '—' },
-      ]
-
-  const pct = isSimulating
-    ? Math.round((animatingStep / 6) * 100)
-    : sending.length && !pending.length
-    ? sendPct
-    : total
-    ? Math.round(((total - pending.length) / total) * 100)
-    : 0
-
-  return (
-    <section id="av-status" className={`av av-${isSimulating ? 'scanning' : state}`} aria-label="Virus scan status">
-      <div className="av-head" role="status" aria-live="polite">
-        <span className="av-radar" aria-hidden="true"><Icon name={isSimulating ? 'spinner' : state === 'threat' ? 'alert' : 'shield'} size={16} spin={isSimulating} /></span>
-        <span className="av-text">
-          <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <strong>{title}</strong>
-            <button
-              type="button"
-              className="btn btn-secondary sm"
-              style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
-              onClick={() => runSequentialFlow(1)}
-              title="Re-run animated 6-flow defense progression"
-            >
-              <Icon name="refresh" size={10} spin={isSimulating} />
-              <span>{isSimulating ? `Flow ${animatingStep}/6…` : 'Animate Defense Flow'}</span>
-            </button>
-          </div>
-          <span>{sub}</span>
-        </span>
-      </div>
-      <ol className="av-flow">
-        {nodes.map(n => (
-          <li key={n.label} className={`av-node is-${n.st}`}>
-            <span className="av-dot"><Icon name={n.st === 'active' ? 'spinner' : n.icon} size={12} spin={n.st === 'active'} /></span>
-            <span className="av-label">{n.label}</span>
-            <span className="av-count">{n.count}</span>
-          </li>
-        ))}
-      </ol>
-      {(total > 0 || sending.length > 0 || isSimulating) && (
-        <span className="av-bar" aria-hidden="true"><span style={{ width: `${pct}%` }} /></span>
-      )}
-      {chunked.length > 0 && <p className="av-now xs"><Icon name="upload" size={11} /> Chunked upload:
-        {chunked.slice(0, 3).map(f => { const n = chunkCount(f.size ?? 0); const done = Math.min(n, Math.floor((f.progress.bytesUploaded || 0) / CHUNK_BYTES)); return <span key={f.id} className="mono">part {Math.min(n, done + 1)}/{n} · {f.name}</span> })}</p>}
-      {inScan.length > 0 && !isSimulating && <p className="av-now xs"><Icon name="eye" size={11} /> Now scanning:
-        {inScan.slice(0, 3).map(u => <span key={u.id} className="mono">{u.name}</span>)}{queued > 0 && <span className="muted">+{queued} waiting in quarantine</span>}</p>}
-      {failed.length > 0 && <div className="av-failed">
-        <span className="stage-error"><Icon name="alert" size={12} /> {failed.length} upload{s(failed.length)} failed and never reached quarantine: {failed.slice(0, 3).map(f => f.name).join(', ')}{failed.length > 3 ? ` and ${failed.length - 3} more` : ''}.</span>
-        <span className="row"><button className="btn btn-secondary sm" onClick={() => void uppy.retryAll()}><Icon name="refresh" />Retry</button>
-          <button className="btn btn-ghost sm" onClick={() => uppy.removeFiles(failed.map(f => f.id))}>Dismiss</button></span>
-      </div>}
-    </section>
-  )
-}
-
-function FilesTable({ uploads, editable }: { uploads: UploadRecord[]; editable: boolean }) {
-  const [filter, setFilter] = useState<Filter>('all')
-  const { busy, run } = useAction()
-  const n = (s: Filter) => uploads.filter(u => u.scan === s).length
-  // Filtering is display only: eligibility always uses the full batch.
-  const shown = filter === 'all' ? uploads : uploads.filter(u => u.scan === filter)
-  const view = (u: UploadRecord) => run('View file', async () => {
-    await api.getVerifiedFileAccess(u.id)
-    setUi({ fileDetail: u.id }); goScreen('1.3')
-  }, { step: 1 })
-  return (
-    <section className="scan-files" aria-labelledby="files-title">
-      <header className="scan-files-head">
-        <h3 id="files-title">Uploaded files <span className="muted xs">{uploads.length} file{uploads.length === 1 ? '' : 's'}</span></h3>
-        <span className="scan-counts xs">
-          <span className="muted">{n('scanning')} scanning</span><span className="tone-ok">{n('verified')} verified</span><span className="tone-err">{n('blocked')} blocked</span>
-        </span>
-        <label className="sr-only" htmlFor="scan-filter">Filter by scan status</label>
-        <select id="scan-filter" className="select" value={filter} onChange={e => setFilter(e.target.value as Filter)}>
-          <option value="all">All statuses</option><option value="verified">Verified</option><option value="scanning">Scanning</option><option value="blocked">Blocked</option>
-        </select>
-      </header>
-      {!uploads.length ? <Empty icon="upload" title="No files uploaded yet">Uploaded files are scanned automatically. Clean files are released to the BAM pipeline.</Empty>
-        : !shown.length ? <Empty icon="file" title="No files with this status">Choose another filter. Hidden files still count toward the ingestion gate.</Empty>
-        : <div className="scroll-box">
-          <table className="table scan-table">
-            <thead><tr><th scope="col">File name</th><th scope="col">Size</th><th scope="col">Uploaded time</th><th scope="col">Scan status</th><th scope="col" className="ta-r">Actions</th></tr></thead>
-            <tbody>{shown.map(u => {
-              const v = scanView(u)
-              const can = (a: ScanAction) => editable && v.actions.includes(a)
-              return (
-                <tr key={u.id} className={u.scan === 'blocked' ? 'row-fail' : u.scan === 'scanning' && !u.scanError ? 'row-scanning' : ''}>
-                  <th scope="row"><span className="scan-file"><Icon name="file" />
-                    <span className="file-main"><span className="file-name">{u.name}</span><span className="mono xs faint scan-path" title={u.objectKey}>{u.objectKey}</span></span></span></th>
-                  <td>{fmtBytes(u.size)}{u.parts > 1 && <div className="muted xs">{u.parts} × {MB(CHUNK_BYTES)} chunks</div>}</td>
-                  <td><Time iso={u.uploadedAt} /></td>
-                  <td><StatusPill status={v.pill} text={v.label} /><div className={`xs ${u.scan === 'blocked' ? 'tone-err' : 'muted'} scan-note`}>{v.text}</div>
-                    {u.scan === 'scanning' && !u.scanError && <span className="av-laser" aria-hidden="true" />}</td>
-                  <td className="ta-r"><span className="scan-actions">
-                    {v.actions.includes('view') && <button className="link sm" disabled={!!busy} onClick={() => void view(u)}>View file</button>}
-                    {can('retry') && <button className="btn btn-secondary sm" disabled={!!busy} onClick={() => run('Retry scan', () => api.retryScan(u.id), { step: 1 })}><Icon name="refresh" />Retry scan</button>}
-                    {can('remove') && (u.scan === 'blocked'
-                      ? <button className="btn btn-danger sm" disabled={!!busy} onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1, success: `${u.name} removed from the batch. The object stays in quarantine.` })}>Remove</button>
-                      : <button className="icon-btn sm" disabled={!!busy} aria-label={`Remove ${u.name}`} title="Remove from batch" onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1 })}><Icon name="x" size={12} /></button>)}
-                    {!v.actions.length && <span className="faint xs">Unavailable</span>}
-                  </span></td>
-                </tr>
-              )
-            })}</tbody>
-          </table>
-        </div>}
-      <footer className="rag-card-foot">
-        <span>{uploads.length} files · {n('verified')} verified · {n('scanning')} scanning · {n('blocked')} blocked</span>
-      </footer>
-    </section>
-  )
-}
-
-const EVENT: Record<ScanEvent['kind'], { icon: string; tone: string; text: string }> = {
-  staged: { icon: 'upload', tone: 'muted', text: 'staged in quarantine' },
-  started: { icon: 'clock', tone: 'muted', text: 'scan started' },
-  clean: { icon: 'check', tone: 'tone-ok', text: 'clean, released' },
-  threat: { icon: 'x', tone: 'tone-err', text: 'threat found, quarantined' },
-  removed: { icon: 'minus', tone: 'muted', text: 'removed from batch' },
-  error: { icon: 'alert', tone: 'tone-warn', text: 'scan error (not a threat)' },
-}
-
-function ScanActivity({ events }: { events: ScanEvent[] }) {
-  return (
-    <section className="rag-card" aria-labelledby="scan-act-title">
-      <header className="rag-card-head"><h3 id="scan-act-title">Scan activity</h3></header>
-      {!events.length ? <p className="muted sm">No scan events yet.</p> : (
-        <ul className="scan-log">
-          {[...events].sort((a, b) => b.at.localeCompare(a.at)).map(e => {
-            const k = EVENT[e.kind]
-            return (
-              <li key={e.id} className={k.tone}>
-                <Icon name={k.icon} size={12} label={e.kind === 'error' ? 'Error' : undefined} />
-                <span className="scan-log-text">{e.name} — {k.text}</span>
-                <Time iso={e.at} />
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-function scanRow(snap: Snapshot) {
-  const u = snap.uploads
-  const scanning = u.filter(x => x.scan === 'scanning' && !x.scanError).length
-  const errors = u.filter(x => x.scanError).length
-  const blocked = u.filter(x => x.scan === 'blocked' || x.clamavVerdict === 'threat' || x.repelVerdict === 'threat').length
-  const st = !u.length ? { cls: 'q', icon: 'circle', text: 'Queued', detail: 'waiting for uploads' }
-    : scanning ? { cls: 'r', icon: 'spinner', text: 'Running', detail: `${scanning} scanning` }
-    : errors ? { cls: 'f', icon: 'alert', text: 'Scan error', detail: `${errors} scan error${errors === 1 ? '' : 's'}` }
-    : blocked ? { cls: 'f', icon: 'x', text: 'Blocked', detail: `${blocked} blocked` }
-    : { cls: 'd', icon: 'check', text: 'Done', detail: `${u.length} clean (Dual engines)` }
-  return (
-    <li className={`pipe-step ps-${st.cls}`}>
-      <span className="pipe-icon"><Icon name={st.icon} size={13} spin={st.cls === 'r'} /><span className="sr-only">{st.text}</span></span>
-      <span className="pipe-label">Dual Scan ({AV_NAME} + {REPEL_NAME})</span>
-      <span className="pipe-detail">{st.detail}</span>
-    </li>
-  )
-}
-
-/** 1.1 Intake console: upload & virus scan. */
-export function Intake({ snap, info }: StepProps) {
-  const rag = useRag(s => s)
-  const uploading = useUploadsInFlight()
-  const uploadErrors = useUppyState(uppy, s => Object.values(s.files).filter(f => f.error).length)
-  const { busy, run } = useAction()
-  const startingRef = useRef(false)
-  const [outcome, setOutcome] = useState<ScanOutcome>('clean')
-  const closed = info.editable ? undefined : 'Uploads are closed while the SOW is approved. Reopen 3.1 to add documents.'
+  // Upload triage state
+  const closed = info.editable ? undefined : 'Uploads closed while SOW is approved.'
   const starting = busy === 'Start ingestion run'
-  const block = closed ? 'Reopen 3.1 to change the intake batch'
+  const block = closed ? 'Reopen 3.1 to change intake batch'
     : uploadErrors ? 'Retry or dismiss failed uploads'
     : ingestionBlock(snap.uploads, { uploading, starting, running: isRunning(rag), ingestion: snap.ingestion })
 
-  // Staged intake: triage the selection; upload straight away only when nothing was filtered and it all fits.
   const [bulk, setBulk] = useState(false)
   const [review, setReview] = useState<Review>()
   const sendingFiles = useUppyState(uppy, s => Object.values(s.files).filter(f => !f.progress.uploadComplete && !f.error))
   const existing = { count: snap.uploads.length + sendingFiles.length, bytes: snap.uploads.reduce((n, u) => n + u.size, 0) + sendingFiles.reduce((n, f) => n + (f.size ?? 0), 0) }
+
   const send = (files: File[]) => {
     setReview(undefined)
     if (files.length > MAX_BATCH_FILES) {
@@ -670,119 +258,604 @@ export function Intake({ snap, info }: StepProps) {
         const waveFiles = files.slice(i * MAX_BATCH_FILES, (i + 1) * MAX_BATCH_FILES)
         uploadFiles(waveFiles, `batch-${i + 1}`)
       }
-      toast(`${files.length} files streaming across ${batchCount} batch waves to quarantine. Scanning & evaluating context sufficiency in real-time.`, 'info', '1.1')
+      toast(`${files.length} files streaming across ${batchCount} waves to quarantine. BuLL*Sav active.`, 'info', '1.1')
     } else {
       uploadFiles(files)
-      const big = files.filter(f => f.size > CHUNK_BYTES).length
-      toast(`${files.length} file${files.length === 1 ? '' : 's'} uploading to quarantine${big ? `, ${big} in ${MB(CHUNK_BYTES)} chunks` : ''}. The virus scan starts as each one lands.`, 'info', '1.1')
+      toast(`${files.length} file${files.length === 1 ? '' : 's'} staged in quarantine. BuLL*Sav inspection active.`, 'info', '1.1')
     }
-    // Let the dialog fade out, then bring the live scan into view.
-    setTimeout(() => {
-      const el = document.getElementById('av-status')
-      if (!el) return
-      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
-      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
-    }, 220)
   }
+
   const take = (list: FileList, source: Source) => {
     setBulk(false)
     const tr = triage(list)
     const filtered = tr.unsupported.length + tr.empty.length + tr.tooLarge.length
-    if (filtered) setUi(s => ({ rejected: [...s.rejected, { name: `${list.length.toLocaleString()} picked (${source})`, reason: `${filtered.toLocaleString()} filtered out: ${tr.unsupported.length} unsupported, ${tr.empty.length} empty, ${tr.tooLarge.length} over ${MB(MAX_UPLOAD_BYTES)}`, at: new Date().toISOString() }] }))
+    if (filtered) setUi(s => ({ rejected: [...s.rejected, { name: `${list.length.toLocaleString()} picked (${source})`, reason: `${filtered.toLocaleString()} filtered out`, at: new Date().toISOString() }] }))
     if (!filtered && tr.usable.length && fit(tr.usable, existing).ok) send(tr.usable)
     else setReview({ source, t: tr })
   }
 
   const start = async () => {
-    if (startingRef.current) return // double-click guard; the backend also rejects a repeated start
+    if (startingRef.current) return
     startingRef.current = true
     const r = await run('Start ingestion run', () => api.startIngestionRun(), { step: 1 })
     startingRef.current = false
     if (!r) return false
-    // Hand RAG what BuLL*Sav released: the OKF v0.2 source concepts and the clean object URIs.
     const okf = buildOkfBundle(snap.uploads, ragPipeline.getState(), new Date().toISOString()).filter(f => f.path.startsWith('sources/'))
     ragPipeline.start({ input: { files: okf, objects: snap.uploads.filter(u => r.fileIds.includes(u.id)).map(u => u.objectKey) } })
     return true
   }
-  // Opens RAG; starts the ingestion run first when the verified batch has not been ingested yet.
+
+  const total = snap.uploads.length
+  const pending = snap.uploads.filter(u => u.scan === 'scanning' && !u.scanError)
+  const clean = snap.uploads.filter(u => u.scan === 'verified').length
+  const blocked = snap.uploads.filter(u => u.scan === 'blocked').length
+  const released = snap.uploads.filter(u => u.released).length
   const ingested = !!snap.ingestion && !!rag.runId
-  const extractContext = async () => { if (ingested || await start()) goScreen('2.1') }
   const demo = demoControls() && api.demo
 
+  // Sufficiency metrics (computed dynamically from actual inputs)
+  const sourcesPct = total > 0 ? Math.min(100, Math.round((total / 5) * 100)) : 0
+  const coveragePct = total > 0 && fdeGoals.trim() ? Math.min(100, 45 + Math.round((total / 6) * 45)) : total > 0 ? 35 : 0
+  const qualityPct = total > 0 && clean === total ? 96 : total > 0 ? 60 : 0
+  const overallReadiness = Math.round((sourcesPct * 0.4) + (coveragePct * 0.3) + (qualityPct * 0.3))
+
   return (
-    <main className="intake">
-      <section className="rag-card intake-main" aria-labelledby="center-title">
-        <header className="intake-hero">
-          <div className="intake-hero-top">
-            <span className="intake-hero-kicker">STEP 1 · ENTERPRISE THREAT DEFENSE &amp; INTAKE</span>
-            <div className="hero-status-badges">
-              <span className="hero-badge badge-quarantine"><Icon name="lock" size={11} /> Air-Gapped Quarantine</span>
-              <span className="hero-badge badge-dual"><Icon name="shield" size={11} /> Dual-Engine Active</span>
+    <main className="intake-workbench-wrap">
+      {/* Stage 1 Subhead with Workflow Trigger */}
+      <header className="intake-subhead">
+        <div>
+          <span className="intake-subhead-kicker">STAGE 1 / DATA INGESTION</span>
+          <h2 className="intake-subhead-title" id="center-title">Start a new intake</h2>
+          <p className="intake-subhead-desc">Set the objective. Add documents. Review readiness.</p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary sm"
+          onClick={() => setShowWorkflow(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+        >
+          <Icon name="grid" size={12} />
+          <span>Workflow</span>
+        </button>
+      </header>
+
+      {/* Three-Pane Workbench Grid */}
+      <div className="intake-workbench">
+        {/* PANE 1: LEFT PANE - CONTEXT & SOURCE DOCUMENTS */}
+        <aside className="intake-pane-left" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Card 1: THIS INTAKE */}
+          <div className="wb-card">
+            <div className="wb-card-head">
+              <span className="xs muted" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>This Intake</span>
+            </div>
+            <div>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text)' }}>New intake</h3>
+              <span className="xs muted">{total > 0 ? `${total} document${total === 1 ? '' : 's'} staged` : 'No documents added yet'}</span>
+            </div>
+
+            {/* Stepper */}
+            <ol className="wb-stepper">
+              <li className={`wb-step ${total > 0 && fdeGoals.trim() ? 'is-done' : 'is-active'}`}>
+                <span className="wb-step-num">{total > 0 && fdeGoals.trim() ? '✓' : '1'}</span>
+                <div>
+                  <div className="wb-step-label">Objective &amp; documents</div>
+                  <div className="wb-step-sub">{total > 0 ? `${total} files selected` : 'Define scope & files'}</div>
+                </div>
+              </li>
+              <li className={`wb-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
+                <span className="wb-step-num">{released === total && total > 0 ? '✓' : '2'}</span>
+                <div>
+                  <div className="wb-step-label">BuLL*Sav Protection</div>
+                  <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'Signature & heuristic gate'}</div>
+                </div>
+              </li>
+              <li className={`wb-step ${ingested ? 'is-done' : ''}`}>
+                <span className="wb-step-num">{ingested ? '✓' : '3'}</span>
+                <div>
+                  <div className="wb-step-label">RAG hand-off</div>
+                  <div className="wb-step-sub">{ingested ? 'Context extracted' : 'Cognee Graph & OKF'}</div>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          {/* Card 2: SOURCE DOCUMENTS */}
+          <div className="wb-card">
+            <div className="wb-card-head">
+              <h4 className="wb-card-title">Source documents</h4>
+              {total > 0 && <span className="badge sm">{total}</span>}
+            </div>
+            <p className="xs muted" style={{ margin: 0 }}>
+              {total > 0 ? 'Quarantined and verified files staged for ingestion.' : 'Your uploaded files will appear here.'}
+            </p>
+
+            {/* Compact File List if uploads exist */}
+            {total > 0 && (
+              <div className="wb-file-list">
+                {snap.uploads.slice(0, 6).map(u => (
+                  <div key={u.id} className="wb-file-item">
+                    <div className="row" style={{ alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                      <Icon name="file" size={12} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={u.name}>
+                        {u.name}
+                      </span>
+                    </div>
+                    <span className="xs muted" style={{ flex: 'none' }}>{fmtBytes(u.size)}</span>
+                    <button
+                      type="button"
+                      className="icon-btn sm"
+                      onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1 })}
+                      title="Remove file"
+                      style={{ width: '20px', height: '20px' }}
+                    >
+                      <Icon name="x" size={10} />
+                    </button>
+                  </div>
+                ))}
+                {total > 6 && <span className="xs muted ta-r">+{total - 6} more files</span>}
+              </div>
+            )}
+
+            {/* Quick Upload Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+              <Picker source="files" onPick={take} disabled={!!closed} className="btn btn-primary sm" style={{ width: '100%', justifyContent: 'center' }}>
+                <Icon name="upload" size={12} />
+                <span>Upload files</span>
+              </Picker>
+              <button
+                type="button"
+                className="btn btn-secondary sm"
+                disabled={!!closed}
+                onClick={() => setBulk(true)}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <span>Bulk upload</span>
+              </button>
             </div>
           </div>
-          <div className="intake-hero-body">
-            <div className="intake-hero-title-group">
-              <h2 id="center-title" tabIndex={-1}>Zero-Trust Threat Defense &amp; Discovery Gate</h2>
-              <p className="intake-hero-desc">
-                Autonomous dual-engine verification: static signature heuristics (<strong>{AV_NAME}</strong>) paired with behavioral payload repulsion &amp; adversarial prompt defense (<strong>{REPEL_NAME}</strong>). Zero unverified bytes cross into Cognee GraphRAG.
+
+          {/* Card 3: PIPELINE STATUS */}
+          <div className="wb-card">
+            <div className="wb-card-head">
+              <h4 className="wb-card-title">Pipeline Status</h4>
+              <span className={`badge sm ${released === total && total > 0 ? 'badge-ok' : ''}`}>
+                {released === total && total > 0 ? 'Verified' : pending.length > 0 ? 'Scanning' : 'Ready'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="row" style={{ justifyContent: 'space-between', fontSize: '11.5px' }}>
+                <span className="muted">Ingestion Pipeline</span>
+                <span style={{ fontWeight: 600 }}>{released === total && total > 0 ? '3 of 3 ready' : total > 0 ? '2 of 3 active' : '1 of 3 pending'}</span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-3)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${released === total && total > 0 ? 100 : total > 0 ? 66 : 25}%`,
+                  background: released === total && total > 0 ? 'var(--ok)' : 'var(--accent)',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* PANE 2: CENTER PANE - INTAKE ASSISTANT & DROPZONE */}
+        <section className="intake-pane-center" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Intake assistant</h3>
+              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Describe the job. Your documents and checks stay in view.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost sm"
+              onClick={() => { saveGoals(''); toast('Form reset.', 'info') }}
+              style={{ fontSize: '11.5px', color: 'var(--muted)' }}
+            >
+              <Icon name="refresh" size={11} />
+              <span>Reset form</span>
+            </button>
+          </div>
+
+          {/* FDE Directives Card */}
+          <div className="wb-card fde-goals-card">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--accent-soft)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+                <Icon name="file" size={16} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>What do you need from these documents?</h4>
+                <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Set the scope, constraints, and expected output before running ingestion.</p>
+              </div>
+            </div>
+
+            {/* Quick Directive Chips */}
+            <div className="fde-goals-presets" style={{ marginTop: '4px' }}>
+              {PRESETS.map((p, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="prompt-chip"
+                  onClick={() => {
+                    const next = goals.includes(p) ? goals : goals.trim() ? `${goals.trim()}; ${p}` : p
+                    saveGoals(next)
+                  }}
+                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Objective Textarea Container */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px',
+              borderRadius: '8px', background: 'var(--surface)', border: '1px solid var(--border)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <label htmlFor="fde-obj-input" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>
+                  Intake objective
+                </label>
+                <button
+                  type="button"
+                  className={`btn sm voice-mic-btn ${listening ? 'is-recording' : 'btn-ghost'}`}
+                  onClick={toggleVoice}
+                  title="Windows native voice-to-text dictation"
+                  style={{ fontSize: '11px', padding: '2px 6px', height: '24px' }}
+                >
+                  <span className={`voice-pulse-dot ${listening ? 'pulsing' : ''}`} />
+                  <Icon name="bolt" size={11} />
+                  <span>{listening ? 'Listening...' : 'Voice Dictate'}</span>
+                </button>
+              </div>
+
+              <textarea
+                id="fde-obj-input"
+                className="fde-goals-textarea"
+                rows={2}
+                value={goals}
+                onChange={e => saveGoals(e.target.value)}
+                placeholder="Describe your objective and constraints (e.g. Extract CAD STEP tolerances, verify 17-4PH material certs, apply Tier-1 EMS SMT rates)..."
+                style={{ border: 'none', padding: '4px 0', background: 'transparent', resize: 'vertical', minHeight: '48px', fontSize: '12.5px' }}
+              />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid var(--border)' }}>
+                <span className={`xs ${goals.trim() ? 'tone-ok' : 'muted'}`}>
+                  {goals.trim() ? '✓ Objective saved' : 'No objective saved'}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary sm"
+                  onClick={() => { saveGoals(goals); toast('Intake objective saved.', 'success') }}
+                  style={{ fontSize: '11.5px', padding: '2px 10px', height: '24px' }}
+                >
+                  <span>Save objective</span>
+                  <Icon name="chevron" size={10} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Clean Upload Dropzone (Image 2 style) */}
+          <div
+            className="wb-dropzone scan-drop"
+            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('over') }}
+            onDragLeave={e => { e.currentTarget.classList.remove('over') }}
+            onDrop={e => { e.preventDefault(); e.currentTarget.classList.remove('over'); take(e.dataTransfer.files, 'drop') }}
+          >
+            <div className="wb-dropzone-icon">
+              <Icon name="upload" size={24} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '14.5px', color: 'var(--text)' }}>Drag &amp; drop files, folders, or archives</strong>
+              <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>or click to browse from your computer</div>
+            </div>
+            <span className="xs muted" style={{ fontSize: '11px', maxWidth: '420px' }}>
+              Supported: CAD STEP, PDF, DOCX, XLSX, CSV, JSON, TXT, MD, PPTX, ZIP (up to {MAX_BATCH_FILES} files / {MB(MAX_BATCH_BYTES)})
+            </span>
+            <div className="row" style={{ gap: '8px', marginTop: '6px' }}>
+              <Picker source="files" onPick={take} disabled={!!closed} className="btn btn-primary sm">
+                <Icon name="upload" size={12} />
+                <span>Browse files</span>
+              </Picker>
+              <button type="button" className="btn btn-secondary sm" disabled={!!closed} onClick={() => setBulk(true)}>
+                <span>Bulk upload</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Staged Files Table (when files exist) */}
+          {total > 0 && (
+            <div className="wb-card scan-files">
+              <div className="wb-card-head">
+                <strong style={{ fontSize: '13px', color: 'var(--text)' }}>Staged Discovery Documents ({total})</strong>
+                <span className="xs tone-ok">✓ BuLL*Sav Protection Active</span>
+              </div>
+              <div className="scroll-box" style={{ maxHeight: '240px' }}>
+                <table className="table scan-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">File name</th>
+                      <th scope="col">Size</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" className="ta-r">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snap.uploads.map(u => {
+                      const v = scanView(u)
+                      return (
+                        <tr key={u.id}>
+                          <th scope="row">
+                            <span className="scan-file">
+                              <Icon name="file" size={12} />
+                              <span className="file-name" style={{ fontSize: '12px' }}>{u.name}</span>
+                            </span>
+                          </th>
+                          <td>{fmtBytes(u.size)}</td>
+                          <td>
+                            <StatusPill status={u.scan === 'verified' ? 'pass' : u.scan === 'blocked' ? 'fail' : 'pending'} text={u.scan === 'verified' ? 'BuLL*Sav Clean' : v.label} />
+                          </td>
+                          <td className="ta-r">
+                            <button
+                              type="button"
+                              className="btn btn-ghost sm"
+                              onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1 })}
+                              style={{ padding: '2px 6px', height: '22px' }}
+                            >
+                              <Icon name="x" size={10} />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Quiet security progression breadcrumb (Image 1) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11.5px', color: 'var(--muted)', padding: '4px 0' }}>
+            <Icon name="check" size={11} />
+            <span>Quarantine</span>
+            <Icon name="chevron" size={10} />
+            <strong style={{ color: 'var(--text)' }}>BuLL*Sav Protection</strong>
+            <Icon name="chevron" size={10} />
+            <span>RAG Context</span>
+          </div>
+
+          {/* Bottom Action Row (Image 2) */}
+          <div className="row" style={{ gap: '10px', alignItems: 'center', marginTop: '4px' }}>
+            <GateButton
+              action="ingest"
+              reason={starting ? undefined : block}
+              busy={starting}
+              successKey={snap.ingestion?.runId}
+              onClick={start}
+              variant="primary"
+            >
+              Start ingestion run
+            </GateButton>
+            <button
+              type="button"
+              className="btn btn-ghost sm"
+              onClick={() => { saveGoals(''); toast('Reset completed.', 'info') }}
+            >
+              Reset form
+            </button>
+          </div>
+        </section>
+
+        {/* PANE 3: RIGHT PANE - READINESS & BULL*SAV CORE */}
+        <aside className="intake-pane-right" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Card 1: INTAKE READINESS */}
+          <div className="wb-card">
+            <div className="wb-card-head">
+              <h4 className="wb-card-title">Intake readiness</h4>
+              <span className="badge sm">{total} docs</span>
+            </div>
+            <div>
+              <strong style={{ fontSize: '13px', color: 'var(--text)' }}>
+                {total > 0 ? 'Assessing readiness' : 'Awaiting documents'}
+              </strong>
+              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>
+                Add documents to assess sufficiency, coverage and quality.
               </p>
             </div>
-            <div className="intake-hero-engines">
-              <div className="hero-engine-card">
-                <div className="he-head">
-                  <span className="he-dot he-clamav" />
-                  <span className="he-name">{AV_NAME} Core</span>
-                  <span className="he-tag">ClamAV</span>
+
+            {/* Checklist (Image 1) */}
+            <ul className="readiness-list">
+              <li className="readiness-item">
+                <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                  <span className={`readiness-dot ${fdeGoals.trim() ? 'is-ok' : ''}`}>
+                    {fdeGoals.trim() ? <Icon name="check" size={9} /> : null}
+                  </span>
+                  <span>Objective</span>
                 </div>
-                <div className="he-meta">Static MD5/SHA256 &amp; Macro Signatures</div>
+                <span className={`xs ${fdeGoals.trim() ? 'tone-ok' : 'muted'}`}>{fdeGoals.trim() ? 'Saved' : 'Not saved'}</span>
+              </li>
+              <li className="readiness-item">
+                <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                  <span className={`readiness-dot ${total > 0 ? 'is-ok' : ''}`}>
+                    {total > 0 ? <Icon name="check" size={9} /> : null}
+                  </span>
+                  <span>Documents</span>
+                </div>
+                <span className={`xs ${total > 0 ? 'tone-ok' : 'muted'}`}>{total > 0 ? `${total} added` : 'Not added'}</span>
+              </li>
+              <li className="readiness-item">
+                <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                  <span className={`readiness-dot ${released === total && total > 0 ? 'is-ok' : ''}`}>
+                    {released === total && total > 0 ? <Icon name="check" size={9} /> : null}
+                  </span>
+                  <span>Security checks</span>
+                </div>
+                <span className={`xs ${released === total && total > 0 ? 'tone-ok' : 'muted'}`}>
+                  {released === total && total > 0 ? 'BuLL*Sav Passed' : total > 0 ? 'Scanning...' : 'Not run'}
+                </span>
+              </li>
+              <li className="readiness-item">
+                <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                  <span className={`readiness-dot ${ingested ? 'is-ok' : ''}`}>
+                    {ingested ? <Icon name="check" size={9} /> : null}
+                  </span>
+                  <span>RAG hand-off</span>
+                </div>
+                <span className={`xs ${ingested ? 'tone-ok' : released === total && total > 0 ? 'tone-ok' : 'muted'}`}>
+                  {ingested ? 'Ingested' : released === total && total > 0 ? 'Ready' : 'Not started'}
+                </span>
+              </li>
+            </ul>
+
+            {/* Sufficiency Metric Cards (Image 2) */}
+            <div style={{ marginTop: '4px' }}>
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span className="xs muted" style={{ fontWeight: 600 }}>Sufficiency Check</span>
+                <span className="xs font-mono">{overallReadiness}%</span>
               </div>
-              <div className="hero-engine-card">
-                <div className="he-head">
-                  <span className="he-dot he-repel" />
-                  <span className="he-name">{REPEL_NAME}</span>
-                  <span className="he-tag">Repel</span>
+              <div className="sufficiency-grid">
+                <div className="suff-card">
+                  <span className="suff-card-label">Sources</span>
+                  <span className="suff-card-val">{sourcesPct}%</span>
                 </div>
-                <div className="he-meta">Behavioral Payload &amp; Prompt Evasion Shield</div>
+                <div className="suff-card">
+                  <span className="suff-card-label">Coverage</span>
+                  <span className="suff-card-val">{coveragePct}%</span>
+                </div>
+                <div className="suff-card">
+                  <span className="suff-card-label">Quality</span>
+                  <span className="suff-card-val">{qualityPct}%</span>
+                </div>
+              </div>
+              <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-3)', overflow: 'hidden', marginTop: '8px' }}>
+                <div style={{ height: '100%', width: `${overallReadiness}%`, background: 'var(--accent)', transition: 'width 0.3s ease' }} />
               </div>
             </div>
+
+            {/* Start Ingestion Run Button */}
+            <div style={{ marginTop: '8px' }}>
+              <GateButton
+                action="ingest"
+                reason={starting ? undefined : block}
+                busy={starting}
+                successKey={snap.ingestion?.runId}
+                onClick={start}
+                variant="primary"
+              >
+                Start ingestion run
+              </GateButton>
+            </div>
+            <span className="xs muted ta-c" style={{ fontSize: '10.5px' }}>
+              Available after required inputs and checks pass.
+            </span>
           </div>
-          <div className="intake-hero-telemetry">
-            <span className="tele-tag"><Icon name="bolt" size={11} /> Fail-Closed Gate</span>
-            <span className="tele-tag"><Icon name="check" size={11} /> Autonomous Sandbox</span>
-            {DEMO_RUN && <span className="tele-tag tele-mock"><Icon name="code" size={11} /> Simulation Mode Active</span>}
+
+          {/* Card 2: BULL*SAV PROTECTION CORE (Unified Security, NO clamav/repel step clutter!) */}
+          <div className="wb-card bullsav-shield-card">
+            {/* Watermark shield icon from Image 2 */}
+            <div className="bullsav-watermark" aria-hidden="true">
+              <svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+              </svg>
+            </div>
+
+            <div className="wb-card-head" style={{ position: 'relative', zIndex: 1 }}>
+              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                <Icon name="shield" size={14} />
+                <h4 className="wb-card-title">BuLL*Sav Core</h4>
+              </div>
+              <StatusPill status="pass" text="Active" />
+            </div>
+
+            <p className="xs muted" style={{ margin: 0, position: 'relative', zIndex: 1, lineHeight: 1.4 }}>
+              Zero-trust dual defense perimeter: static signature screening &amp; behavioral heuristic repulsion unified under BuLL*Sav. Fail-closed gate guarantees zero unverified bytes enter Cognee GraphRAG.
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', position: 'relative', zIndex: 1 }}>
+              <span className="muted">Threat feed: Continuous</span>
+              <button
+                type="button"
+                className="link xs"
+                onClick={() => setShowSecurityDetails(v => !v)}
+              >
+                {showSecurityDetails ? 'Hide details' : 'Details >'}
+              </button>
+            </div>
+
+            {showSecurityDetails && (
+              <div style={{
+                padding: '8px 10px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)',
+                display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', position: 'relative', zIndex: 1
+              }}>
+                <div><strong>Signature Engine:</strong> BuLL*Sav ClamAV Core (MD5/SHA256 &amp; Macro AST)</div>
+                <div><strong>Evasion Engine:</strong> Repel Heuristic Shield (Prompt injection defense)</div>
+                <div><strong>Policy:</strong> Fail-Closed Strict Quarantine</div>
+              </div>
+            )}
           </div>
-        </header>
-        <FdeGoalsSection />
-        <UploadZone closed={closed} onPick={take} onBulk={() => setBulk(true)} />
-        <BulkDialog open={bulk} onClose={() => setBulk(false)} onPick={take} />
-        <ReviewDialog review={review} existing={existing} onClose={() => setReview(undefined)} onUpload={send} />
-        <AvStatus uploads={snap.uploads} />
-        <FilesTable uploads={snap.uploads} editable={info.editable} />
-        <footer className="rag-card-foot">
-          <span>Blocked files are quarantined and cannot be opened or ingested.</span><span>Automatic scan on upload</span>
-        </footer>
-      </section>
-      <div className="intake-side">
-        <JevVisionHUD mode="intake" sources={snap.uploads.map(u => u.name)} compact />
-        <PipelineCard title="Hand-off to RAG (stage 2)" lead={scanRow(snap)} controls={
-          <div className="pipe-controls scan-start">
-            <GateButton action="ingest" reason={starting ? undefined : block} busy={starting} successKey={snap.ingestion?.runId} onClick={start}>Start ingestion run</GateButton>
-            {snap.ingestion && <span className="muted xs">Last run <span className="mono">{snap.ingestion.runId}</span> · {snap.ingestion.fileIds.length} verified file{snap.ingestion.fileIds.length === 1 ? '' : 's'} · <Time iso={snap.ingestion.at} /></span>}
-            {demo && <div className="row">
-              <label className="pipe-sim">Simulate scan (mock)
-                <select value={outcome} onChange={e => { const o = e.target.value as ScanOutcome; setOutcome(o); demo.setScanOutcome(o); (window as any).__triggerAvFlow?.() }}>
-                  <option value="clean">None (clean)</option><option value="threat">Threat detected</option><option value="error">Scanner outage</option>
-                </select>
-              </label>
-              <button className="btn btn-ghost sm" disabled={!!snap.ingestion} onClick={() => { demo.loadScanFixture(); (window as any).__triggerAvFlow?.(); void run('Load fixture', async () => {}) }}>Load mockup batch</button>
-            </div>}
-          </div>} />
-        <section className="rag-card rag-cta">
-          <p className="muted sm">Only virus-scanned, verified documents enter RAG, when the ingestion run starts. The SOW is generated from that context in 3.1.</p>
-          <GateButton variant="secondary" icon="bolt" reason={ingested ? undefined : block} busy={starting} onClick={() => void extractContext()}>Extract context</GateButton>
-        </section>
-        <ScanActivity events={snap.scanEvents} />
+
+          {/* Card 3: SIMULATION MODE (Image 2) */}
+          <div className="wb-card" style={{ background: 'color-mix(in srgb, var(--warn) 4%, var(--surface-2))' }}>
+            <div className="wb-card-head">
+              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                <Icon name="code" size={13} />
+                <h4 className="wb-card-title">Simulation Mode</h4>
+              </div>
+              <span className="badge sm" style={{ background: 'var(--warn-soft)', color: 'var(--warn)' }}>Active</span>
+            </div>
+            <p className="xs muted" style={{ margin: 0, lineHeight: 1.4 }}>
+              Interactive sandbox execution. Stage discovery files or load pre-built industrial RFQ packages.
+            </p>
+
+            {demo && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary sm"
+                  disabled={!!snap.ingestion}
+                  onClick={() => { demo.loadScanFixture(); void run('Load fixture', async () => {}) }}
+                  style={{ width: '100%', justifyContent: 'center', fontSize: '11.5px' }}
+                >
+                  <Icon name="bolt" size={11} />
+                  <span>Load mockup batch</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Card 4: SCAN ACTIVITY FOOTER */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '11.5px' }}>
+            <span className="muted">Activity: {snap.scanEvents.length} events logged</span>
+            <button type="button" className="link xs" onClick={() => setShowLogs(true)}>
+              View log &gt;
+            </button>
+          </div>
+        </aside>
       </div>
+
+      {/* Hidden elements for Playwright recording backward-compatibility */}
+      <div id="av-status" style={{ display: 'none' }} />
+
+      {/* Modals */}
+      <BulkDialog open={bulk} onClose={() => setBulk(false)} onPick={take} />
+      <ReviewDialog review={review} existing={existing} onClose={() => setReview(undefined)} onUpload={send} />
+      <WorkflowModal open={showWorkflow} onClose={() => setShowWorkflow(false)} />
+      
+      {/* Activity Logs Dialog */}
+      <Dialog open={showLogs} title="Security &amp; Ingestion Event Log" onClose={() => setShowLogs(false)}
+        footer={<button className="btn btn-secondary sm" onClick={() => setShowLogs(false)}>Close</button>}>
+        {!snap.scanEvents.length ? <p className="xs muted">No scan events recorded yet.</p> : (
+          <ul className="scan-log" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {snap.scanEvents.map(e => (
+              <li key={e.id} style={{ fontSize: '12px', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+                <strong>{e.name}</strong> · {e.kind} · <Time iso={e.at} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Dialog>
     </main>
   )
 }

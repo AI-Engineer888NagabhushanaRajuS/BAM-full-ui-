@@ -36,8 +36,9 @@ const paths: Record<string, ReactNode> = {
   sparkle: <path d="M8 2l1.4 4.6L14 8l-4.6 1.4L8 14l-1.4-4.6L2 8l4.6-1.4z" />,
   rocket: <><path d="M8 1.8c2.2 1.6 3 3.8 3 6.2v3.2H5V8c0-2.4.8-4.6 3-6.2z" /><circle cx="8" cy="6.6" r="1.2" /><path d="M5 9.5l-2 2.2v1.5l2-1M11 9.5l2 2.2v1.5l-2-1M7 13.5h2" /></>,
   doccheck: <><path d="M4 2h5l3 3v9H4z" /><path d="M9 2v3h3M6 10l1.5 1.5L10.5 8" /></>,
-  save: <><path d="M3 3h8l2 2v8H3z" /><path d="M5.5 3v3h5V3M5.5 13v-3.5h5V13" /></>,
   gear: <><circle cx="8" cy="8" r="2.5" /><path d="M13.2 9.5a1.2 1.2 0 00.2 1.3l.1.1a1.2 1.2 0 01-1.7 1.7l-.1-.1a1.2 1.2 0 00-1.3-.2 1.2 1.2 0 00-.7 1.1V14a1.2 1.2 0 01-2.4 0v-.6a1.2 1.2 0 00-.8-1.1 1.2 1.2 0 00-1.3.2l-.1.1a1.2 1.2 0 01-1.7-1.7l.1-.1a1.2 1.2 0 00.2-1.3 1.2 1.2 0 00-1.1-.7H2a1.2 1.2 0 010-2.4h.6a1.2 1.2 0 001.1-.8 1.2 1.2 0 00-.2-1.3l-.1-.1a1.2 1.2 0 011.7-1.7l.1.1a1.2 1.2 0 001.3.2 1.2 1.2 0 00.7-1.1V2a1.2 1.2 0 012.4 0v.6a1.2 1.2 0 00.8 1.1 1.2 1.2 0 001.3-.2l.1-.1a1.2 1.2 0 011.7 1.7l-.1.1a1.2 1.2 0 00-.2 1.3 1.2 1.2 0 001.1.7H14a1.2 1.2 0 010 2.4h-.6a1.2 1.2 0 00-1.1.8z" /></>,
+  bell: <><path d="M4 6.5a4 4 0 018 0v3l1.5 2H2.5L4 9.5v-3z" /><path d="M6.5 13.5a1.5 1.5 0 003 0" /></>,
+  grid: <><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" /><rect x="9" y="2.5" width="4.5" height="4.5" rx="1" /><rect x="2.5" y="9" width="4.5" height="4.5" rx="1" /><rect x="9" y="9" width="4.5" height="4.5" rx="1" /></>,
 }
 
 export function Icon({ name, size = 16, spin, label }: { name: keyof typeof paths | string; size?: number; spin?: boolean; label?: string }) {

@@ -1475,3 +1475,305 @@ body { transition: background-color .4s ease, color .4s ease; }
   align-items: center;
 }
 
+/* ===== BAM Action Button Labels Overlay ===================================== */
+.bam-labels {
+  display: inline-grid;
+  place-items: center;
+}
+.bam-labels > span {
+  grid-area: 1 / 1;
+}
+.bam-labels > span.off {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ===== Three-Pane Workbench (Variant 2 / Images 1 & 2) ====================== */
+.intake-workbench-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 24px 28px;
+  max-width: 1720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.intake-subhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.intake-subhead-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.intake-subhead-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 2px 0 0;
+  letter-spacing: -0.02em;
+}
+
+.intake-subhead-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.intake-workbench {
+  display: grid;
+  grid-template-columns: minmax(290px, 320px) minmax(0, 1.4fr) minmax(320px, 360px);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1280px) {
+  .intake-workbench {
+    grid-template-columns: minmax(270px, 300px) minmax(0, 1fr);
+  }
+  .intake-pane-right {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 920px) {
+  .intake-workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Workbench Cards */
+.wb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.wb-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wb-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* Stepper on Left Pane */
+.wb-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.wb-step.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.wb-step.is-done {
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+}
+
+.wb-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--muted);
+  flex: none;
+}
+
+.wb-step.is-active .wb-step-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.wb-step.is-done .wb-step-num {
+  background: var(--ok);
+  color: #fff;
+}
+
+.wb-step-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.wb-step-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* Left pane compact file items */
+.wb-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.wb-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+/* Center Pane Upload Zone (Image 2 style) */
+.wb-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 28px 20px;
+  border-radius: 12px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wb-dropzone:hover, .wb-dropzone.over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.wb-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+/* Right Pane Readiness Checklist */
+.readiness-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.readiness-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.readiness-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.readiness-dot.is-ok {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+
+/* Sufficiency 3-Card Grid */
+.sufficiency-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.suff-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.suff-card-label {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.suff-card-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Watermark Shield Card for BuLL*Sav Core */
+.bullsav-shield-card {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ok) 4%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
+}
+
+.bullsav-watermark {
+  position: absolute;
+  right: -12px;
+  bottom: -15px;
+  opacity: 0.08;
+  pointer-events: none;
+  color: var(--text);
+}
+
+
