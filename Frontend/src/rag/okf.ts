@@ -38,14 +38,14 @@ export function buildOkfBundle(uploads: UploadRecord[], rag: Pick<RagState, 'run
   const files: OkfFile[] = []
   const released = uploads.filter(u => u.released)
 
-  // Sources: every released (virus-scanned clean) upload. Machine-confirmed by the BuLL*Sav scan (Digibull Security AntiVirus Engine).
+  // Sources: every released (virus-scanned clean) upload. Machine-confirmed by the BuLLSav scan (Digibull Security AntiVirus Engine).
   for (const u of released) files.push({ path: `sources/${slug(u.name)}.md`, content: doc({
-    type: 'Source Document', title: u.name, description: `Discovery document released by BuLL*Sav, Digibull Security AntiVirus Engine (${(u.size / 1048576).toFixed(1)} MB).`,
+    type: 'Source Document', title: u.name, description: `Discovery document released by BuLLSav, Digibull Security AntiVirus Engine (${(u.size / 1048576).toFixed(1)} MB).`,
     resource: u.objectKey, tags: ['discovery', 'stage-1'],
     generated: { by: 'bam-intake/1.0', at: z(u.uploadedAt) },
     verified: u.scanEndedAt ? [{ by: 'process:bullsav', at: z(u.scanEndedAt) }] : undefined,
     status: 'stable',
-  }, `# Source\n\nStored at \`${u.objectKey}\`${u.parts > 1 ? `, uploaded in ${u.parts} chunks` : ''}. Released after a clean BuLL*Sav verdict.`) })
+  }, `# Source\n\nStored at \`${u.objectKey}\`${u.parts > 1 ? `, uploaded in ${u.parts} chunks` : ''}. Released after a clean BuLLSav verdict.`) })
 
   // Entities: graph nodes extracted by Cognee, with per-claim attribution to their source documents.
   const extracted = rag.steps.find(s => s.key === 'graph')?.status === 'done'
@@ -97,7 +97,7 @@ export function buildOkfBundle(uploads: UploadRecord[], rag: Pick<RagState, 'run
     return list.length ? `# ${title}\n\n${list.map(f => `* [${fmTitle(f.content)}](${f.path}) - ${fmField(f.content, 'description') ?? ''}`).join('\n')}\n` : ''
   }
   files.unshift({ path: 'index.md', content: `---\nokf_version: "${OKF_VERSION}"\n---\n\n${[section('Sources', 'sources/'), section('Entities', 'entities/'), section('Schemas', 'schemas/')].filter(Boolean).join('\n')}` })
-  files.push({ path: 'log.md', content: `# Directory Update Log\n\n## ${at.slice(0, 10)}\n* **Creation**: ${released.length} sources released by BuLL*Sav; run ${rag.runId ?? 'pending'} produced ${files.filter(f => f.path.startsWith('entities/')).length} entities and ${files.filter(f => f.path.startsWith('schemas/')).length} schemas.\n${rag.handoffs.map(h => `* **Update**: ${h.schema} ${h.version} sent to the Workbench (${z(h.at)}).`).join('\n')}\n` })
+  files.push({ path: 'log.md', content: `# Directory Update Log\n\n## ${at.slice(0, 10)}\n* **Creation**: ${released.length} sources released by BuLLSav; run ${rag.runId ?? 'pending'} produced ${files.filter(f => f.path.startsWith('entities/')).length} entities and ${files.filter(f => f.path.startsWith('schemas/')).length} schemas.\n${rag.handoffs.map(h => `* **Update**: ${h.schema} ${h.version} sent to the Workbench (${z(h.at)}).`).join('\n')}\n` })
   return files
 }
 

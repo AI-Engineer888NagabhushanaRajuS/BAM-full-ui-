@@ -1,7 +1,7 @@
-// 1.1 Intake console: Three-pane workbench data ingestion & BuLL*Sav zero-trust defense.
+// 1.1 Intake console: Three-pane workbench data ingestion & BuLLSav zero-trust defense.
 // Left: Context, Stepper & Source Documents.
 // Center: Intake Assistant, FDE Directives (Text & Native Voice) & Dropzone.
-// Right: Readiness Checklist, Sufficiency Metrics, BuLL*Sav Core & Ingestion Gate.
+// Right: Readiness Checklist, Sufficiency Metrics, BuLLSav Core & Ingestion Gate.
 
 import { useEffect, useRef, useState } from 'react'
 import { useUppyState } from '@uppy/react'
@@ -45,7 +45,7 @@ const HOWTO: { key: Exclude<Source, 'drop'>; icon: string; title: string; button
   { key: 'files', icon: 'upload', title: 'Bulk Mixed Packages', button: 'Bulk upload', steps: [
     'Multi-batch streaming for enterprise RFQ bundles up to 1,000 files.',
     'Supports mixed CAD geometry, BOM workbooks, engineering threads and nested ZIPs.',
-    'Automated batch wave pipelining into BuLL*Sav zero-trust quarantine.',
+    'Automated batch wave pipelining into BuLLSav zero-trust quarantine.',
   ] },
 ]
 
@@ -61,16 +61,63 @@ function Picker({ source, onPick, children, disabled, className = 'btn btn-secon
   </>
 }
 
-function BulkDialog({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (l: FileList, s: Source) => void }) {
+function IngestModal({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (l: FileList, s: Source) => void }) {
+  const [isDragging, setIsDragging] = useState(false)
+  const dropInputRef = useRef<HTMLInputElement | null>(null)
+
   return (
-    <Dialog open={open} title="Intake Document & Package Assistant" onClose={onClose} className="dialog wide"
+    <Dialog open={open} title="Intake Document & Package Assistant" onClose={onClose} className="dialog wide ingest-mode-modal"
       footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}>
       <p className="muted sm" style={{ margin: '0 0 12px 0' }}>
         Select files, full project directories, or compressed archives. If you choose a folder with nested ZIP archives, every contained document and archive is automatically discovered and staged for zero-trust scanning.
       </p>
+
+      {/* Prominent Modal Drag & Drop Landing Zone */}
+      <div
+        className={`ingest-modal-dropzone ${isDragging ? 'is-dragging' : ''}`}
+        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setIsDragging(true) }}
+        onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+        onDrop={e => {
+          e.preventDefault()
+          setIsDragging(false)
+          if (e.dataTransfer?.files?.length) {
+            onPick(e.dataTransfer.files, 'drop')
+          }
+        }}
+        onClick={() => dropInputRef.current?.click()}
+      >
+        <div className="ingest-drop-icon">
+          <Icon name="upload" size={24} />
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <strong style={{ fontSize: '13.5px', color: 'var(--text)' }}>
+            {isDragging ? 'Release files or folders to stage for intake' : 'Drag & drop documents, folders, or ZIP archives right here'}
+          </strong>
+          <p className="xs muted" style={{ margin: '3px 0 0' }}>
+            Supports PDF, DOCX, XLSX, STEP CAD, and nested ZIP archives (auto-extracted)
+          </p>
+        </div>
+        <span className="pill tone-ok xs">✓ BuLLSav Zero-Trust Quarantine Active</span>
+        <input
+          ref={dropInputRef}
+          type="file"
+          hidden
+          multiple
+          accept={ACCEPTED_TYPES.join(',')}
+          onChange={e => { if (e.target.files) { onPick(e.target.files, 'files'); e.target.value = '' } }}
+        />
+      </div>
+
+      <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <strong style={{ fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
+          Select Ingestion Modality
+        </strong>
+        <span className="xs muted">Auto-discovers nested ZIPs</span>
+      </div>
+
       <div className="howto">
         {HOWTO.map(h => (
-          <section key={h.key} className="howto-card">
+          <section key={h.title} className="howto-card">
             <header><span className="howto-icon"><Icon name={h.icon} size={14} /></span><strong>{h.title}</strong></header>
             <ol>{h.steps.map(s => <li key={s}>{s}</li>)}</ol>
             <Picker source={h.key} onPick={onPick} className="btn btn-primary sm">{h.button}</Picker>
@@ -80,6 +127,8 @@ function BulkDialog({ open, onClose, onPick }: { open: boolean; onClose: () => v
     </Dialog>
   )
 }
+
+const BulkDialog = IngestModal
 
 export interface Review { source: Source; t: Triage<File> }
 type Existing = { count: number; bytes: number }
@@ -199,7 +248,7 @@ function WorkflowModal({ open, onClose }: { open: boolean; onClose: () => void }
       footer={<button className="btn btn-primary sm" onClick={onClose}>Close</button>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
         <p className="sm muted" style={{ alignSelf: 'flex-start', margin: 0 }}>
-          End-to-end data lifecycle: Multi-Modal FDE Directives → BuLL*Sav Zero-Trust Perimeter → Cognee GraphRAG → 80% Sufficiency Gate → Dynamic SOW → ISATVON 1.4 Temporal Execution.
+          End-to-end data lifecycle: Multi-Modal FDE Directives → BuLLSav Zero-Trust Perimeter → Cognee GraphRAG → 80% Sufficiency Gate → Dynamic SOW → ISATVON 1.4 Temporal Execution.
         </p>
         <img
           src="/assets/workflows/01_end_to_end_architecture.svg"
@@ -232,8 +281,7 @@ function WorkflowModal({ open, onClose }: { open: boolean; onClose: () => void }
 const FLOW_STAGES = [
   { label: 'Upload & Ingest', icon: 'upload', desc: 'Ingesting binary payload into quarantine memory sandbox with auto-chunking' },
   { label: 'Quarantine Sandbox', icon: 'lock', desc: 'Isolating untrusted bytes in memory sandbox before static signature analysis' },
-  { label: 'BuLL*Sav ClamAV', icon: 'shield', desc: 'Comparing MD5/SHA256 hashes against daily signature feeds & macro definitions' },
-  { label: 'Repel Shield', icon: 'shield', desc: 'DigiBull Pre-Prompt Guardrails testing prompt injection evasion & payloads' },
+  { label: 'BuLLSav Twin Engine', icon: 'shield', desc: 'Parallel consensus screening: ClamAV static signatures + Repel behavioral evasion repulsion' },
   { label: 'AST Inspection', icon: 'code', desc: 'Scanning workbook formula strings and embedded code for execution escapes' },
   { label: 'Released', icon: 'check', desc: 'Fail-closed verification complete. Released for Cognee graph entity extraction' },
 ]
@@ -264,17 +312,17 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
 
   const runSequentialFlow = (targetStep = 1) => {
     if (animationTimer.current) clearTimeout(animationTimer.current)
-    if (targetStep <= 6) {
+    if (targetStep <= 5) {
       isRunningRef.current = true
       setAnimatingStep(targetStep)
       animationTimer.current = setTimeout(() => {
         runSequentialFlow(targetStep + 1)
-      }, 120) // Fast 120ms per step = 720ms total sequence
+      }, 140) // 140ms per step = 700ms total sequence
     } else {
       setAnimatingStep(null)
       isRunningRef.current = false
       if (uploads.length > 0) {
-        toast(`🎉 BuLL*Sav & Repel Security Scanning Complete! All ${uploads.length} files verified clean. Auto-launching Pre-Flight Cockpit...`, 'success')
+        toast(`🎉 BuLLSav Twin Engine Complete! ClamAV & Repel verified all ${uploads.length} files clean. Auto-launching Pre-Flight Cockpit...`, 'success')
         setTimeout(() => openPreflight(), 400)
       }
     }
@@ -306,17 +354,17 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
 
   const [title, sub] = isSimulating
     ? [
-        `Workflow Step ${animatingStep}/6: ${currentStepInfo?.label}`,
+        `Workflow Step ${animatingStep}/5: ${currentStepInfo?.label}`,
         currentStepInfo?.desc ?? '',
       ]
     : {
-        idle: [`BuLL*Sav Security Shield: Zero-Trust Quarantine Ready`, 'Every uploaded byte is isolated in quarantine and inspected through ClamAV signatures and Repel heuristic guardrails.'],
+        idle: [`BuLLSav Twin Engine: Zero-Trust Quarantine Ready`, 'Every uploaded byte is isolated in quarantine and inspected through ClamAV signatures and Repel heuristic guardrails.'],
         scanning: sending.length && !pending.length
           ? [`Uploading ${sending.length} file${s(sending.length)} to quarantine · ${sendPct}%`, chunked.length ? `${chunked.length} large file${s(chunked.length)} sent in ${MB(CHUNK_BYTES)} chunks. Scanned upon landing.` : 'Files quarantined and evaluated upon landing.']
-          : [`BuLL*Sav Protection Active · ${total - pending.length} of ${total} inspected`, 'Dual-engine defense: ClamAV signature screening + Repel prompt injection repulsion active.'],
+          : [`BuLLSav Twin Engine Active · ${total - pending.length} of ${total} inspected`, 'Dual-engine consensus defense: ClamAV signature screening + Repel prompt injection repulsion.'],
         threat: [`${blocked} threat${s(blocked)} quarantined by security perimeter`, 'Blocked files cannot be opened or ingested. Remove them to continue.'],
         error: [`${errors} scan${s(errors)} did not finish`, 'No verdict means not clean. Retry the scan or remove the file.'],
-        clear: [`All ${total} file${s(total)} verified clean (BuLL*Sav & Repel)`, 'Zero-trust perimeter passed. Released to Cognee GraphRAG for entity extraction.'],
+        clear: [`All ${total} file${s(total)} verified clean (BuLLSav Twin Engine)`, 'Zero-trust perimeter passed. Released to Cognee GraphRAG for entity extraction.'],
       }[state]
 
   type St = 'idle' | 'active' | 'done' | 'alert'
@@ -333,14 +381,13 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
         { label: 'Upload & Ingest', icon: 'upload', st: sending.length ? 'active' : failed.length ? 'alert' : total ? 'done' : 'idle',
           count: sending.length ? `${sendPct}%` : failed.length ? `${failed.length} failed` : total ? `${total} sent` : '—' },
         { label: 'Quarantine Sandbox', icon: 'lock', st: queued ? 'active' : total ? 'done' : 'idle', count: queued ? `${queued} waiting` : total ? 'Cleared' : '—' },
-        { label: 'BuLL*Sav ClamAV', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total} clean` : '—' },
-        { label: 'Repel Shield', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total} clean` : '—' },
+        { label: 'BuLLSav Twin Engine', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? (resolved ? '2/2 Clean' : `${total - pending.length}/${total}`) : '—' },
         { label: 'AST Inspection', icon: 'code', st: blocked ? 'alert' : resolved ? 'done' : clean ? 'active' : 'idle', count: total ? `${clean} clean` : '—' },
         { label: 'Released', icon: 'bolt', st: resolved ? 'done' : released ? 'active' : 'idle', count: total ? `${released || total} of ${total}` : '—' },
       ]
 
   const pct = isSimulating
-    ? Math.round((animatingStep / 6) * 100)
+    ? Math.round((animatingStep / 5) * 100)
     : sending.length && !pending.length
     ? sendPct
     : resolved
@@ -363,7 +410,7 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
               className="btn btn-secondary sm"
               style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
               onClick={() => runSequentialFlow(1)}
-              title="Re-run the 6-stage security inspection animation sequence"
+              title="Re-run the 5-stage security inspection animation sequence"
             >
               <Icon name="bolt" size={10} />
               <span>Simulate Pipeline Flow</span>
@@ -388,6 +435,91 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
           </li>
         ))}
       </ol>
+
+      {/* Interactive Git-Branching Accordion for BuLLSav Twin Engine */}
+      <details className="av-twin-accordion" open>
+        <summary className="av-twin-summary">
+          <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+            <span className="git-branch-pill-icon"><Icon name="git-branch" size={12} /></span>
+            <strong style={{ fontSize: '12px', color: 'var(--text)' }}>BuLLSav Twin Engine: Parallel Git-Branch Consensus</strong>
+            <span className={`badge sm ${resolved ? 'badge-ok' : (inScan.length || (isSimulating && animatingStep === 3)) ? 'badge-accent' : ''}`}>
+              {resolved ? '2 of 2 Branches Clean' : (inScan.length || (isSimulating && animatingStep === 3)) ? 'Active Consensus Scan' : 'Consensus Gate'}
+            </span>
+          </div>
+          <span className="xs muted" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span>Dual Git-Branches</span>
+            <Icon name="chevron" size={10} />
+          </span>
+        </summary>
+
+        <div className="av-git-tree">
+          {/* Quarantine Ingress */}
+          <div className="git-trunk-node git-ingress-node">
+            <span className="git-dot-ingress" />
+            <span className="git-trunk-label">Quarantine Ingress (SHA-256 Isolated Memory Sandbox · Zero-Trust Pipeline)</span>
+          </div>
+
+          {/* Twin Parallel Branches */}
+          <div className="git-branches-grid">
+            {/* Branch A: ClamAV Core */}
+            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScan.length ? 'is-active' : resolved ? 'is-done' : ''}`}>
+              <div className="git-branch-header">
+                <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                  <span className="git-branch-symbol">├──</span>
+                  <span className="git-branch-code">branch: engine/clamav-core</span>
+                </div>
+                <StatusPill
+                  status={(isSimulating && animatingStep === 3) || inScan.length ? 'pending' : resolved ? 'pass' : 'pending'}
+                  text={(isSimulating && animatingStep === 3) || inScan.length ? 'Scanning Signatures…' : resolved ? 'Clean (0 CVEs)' : 'Ready'}
+                />
+              </div>
+              <div className="git-branch-content">
+                <div className="row" style={{ alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '12px', color: 'var(--text)' }}>
+                  <Icon name="shield" size={12} />
+                  <span>🌿 ClamAV Core v1.4 (Static Signatures)</span>
+                </div>
+                <p className="xs muted" style={{ margin: '3px 0 0' }}>
+                  MD5/SHA-256 hash lookup against daily threat feeds, macro AST disassembly &amp; known CVE payload scanning.
+                </p>
+              </div>
+            </div>
+
+            {/* Branch B: Repel Shield */}
+            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScan.length ? 'is-active' : resolved ? 'is-done' : ''}`}>
+              <div className="git-branch-header">
+                <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                  <span className="git-branch-symbol">└──</span>
+                  <span className="git-branch-code">branch: engine/repel-shield</span>
+                </div>
+                <StatusPill
+                  status={(isSimulating && animatingStep === 3) || inScan.length ? 'pending' : resolved ? 'pass' : 'pending'}
+                  text={(isSimulating && animatingStep === 3) || inScan.length ? 'Repelling Payloads…' : resolved ? 'Repelled (0 Exploits)' : 'Ready'}
+                />
+              </div>
+              <div className="git-branch-content">
+                <div className="row" style={{ alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '12px', color: 'var(--text)' }}>
+                  <Icon name="shield" size={12} />
+                  <span>🌿 Repel Behavioral Shield (Heuristic &amp; Evasion)</span>
+                </div>
+                <p className="xs muted" style={{ margin: '3px 0 0' }}>
+                  DigiBull pre-prompt guardrails, adversarial prompt injection repulsion, polyglot binary traps &amp; jailbreak shields.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Consensus Merge Trunk */}
+          <div className="git-trunk-node git-merge-node">
+            <span className={`git-dot-merge ${resolved ? 'is-done' : ''}`} />
+            <span className="git-trunk-label">
+              git merge: Unanimous Consensus Verdict (2/2 Passed) &rarr; Releases to AST Inspection
+            </span>
+            <span className="xs font-mono" style={{ marginLeft: 'auto', color: resolved ? 'var(--ok)' : 'var(--muted)' }}>
+              {resolved ? '✓ Unanimous Pass' : 'Strict Consensus 2/2 Required'}
+            </span>
+          </div>
+        </div>
+      </details>
     </section>
   )
 }
@@ -495,10 +627,10 @@ export function Intake({ snap, info }: StepProps) {
         const waveFiles = files.slice(i * MAX_BATCH_FILES, (i + 1) * MAX_BATCH_FILES)
         uploadFiles(waveFiles, `batch-${i + 1}`)
       }
-      toast(`${files.length} files streaming across ${batchCount} waves to quarantine. BuLL*Sav active.`, 'info', '1.1')
+      toast(`${files.length} files streaming across ${batchCount} waves to quarantine. BuLLSav active.`, 'info', '1.1')
     } else {
       uploadFiles(files)
-      toast(`${files.length} file${files.length === 1 ? '' : 's'} staged in quarantine. BuLL*Sav inspection active.`, 'info', '1.1')
+      toast(`${files.length} file${files.length === 1 ? '' : 's'} staged in quarantine. BuLLSav inspection active.`, 'info', '1.1')
     }
   }
 
@@ -523,8 +655,13 @@ export function Intake({ snap, info }: StepProps) {
     const tr = triage(list)
     const filtered = tr.unsupported.length + tr.empty.length + tr.tooLarge.length
     if (filtered) setUi(s => ({ rejected: [...s.rejected, { name: `${list.length.toLocaleString()} picked (${source})`, reason: `${filtered.toLocaleString()} filtered out`, at: new Date().toISOString() }] }))
-    if (!filtered && tr.usable.length && fit(tr.usable, existing).ok) send(tr.usable)
-    else setReview({ source, t: tr })
+    
+    // Always transition to Uppy Tile Dashboard (ReviewDialog) so user can inspect tiles & waves
+    if (tr.usable.length > 0) {
+      setReview({ source, t: tr })
+    } else {
+      toast('No compatible documents discovered in selection.', 'info', '1.1')
+    }
   }
 
   const start = async () => {
@@ -562,7 +699,7 @@ export function Intake({ snap, info }: StepProps) {
   useEffect(() => {
     if (released === total && total > 0 && prevReleasedRef.current !== released) {
       prevReleasedRef.current = released
-      toast(`🎉 BuLL*Sav & Repel Security Scanning Complete! All ${total} files cleared. Auto-opening Pre-Flight Verification Cockpit...`, 'success')
+      toast(`🎉 BuLLSav Twin Engine Complete! All ${total} files cleared. Auto-opening Pre-Flight Verification Cockpit...`, 'success')
       const timer = setTimeout(() => {
         openPreflight()
       }, 700)
@@ -658,8 +795,8 @@ export function Intake({ snap, info }: StepProps) {
               Adaptive intake: CAD STEP, PDF drawings, XLSX BOMs, specifications
             </p>
             <div style={{ marginTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              <span className="pill tone-ok sm">✓ BuLL*Sav Zero-Trust Quarantine Active</span>
-              <span className="pill tone-info sm">ClamAV + Repel Shield Ready</span>
+              <span className="pill tone-ok sm">✓ BuLLSav Zero-Trust Quarantine Active</span>
+              <span className="pill tone-info sm">Twin Engine (ClamAV + Repel) Ready</span>
             </div>
           </div>
         </div>
@@ -709,8 +846,8 @@ export function Intake({ snap, info }: StepProps) {
               <li className={`wb-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
                 <span className="wb-step-num">{released === total && total > 0 ? '✓' : '2'}</span>
                 <div>
-                  <div className="wb-step-label">BuLL*Sav Protection</div>
-                  <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'Signature & heuristic gate'}</div>
+                  <div className="wb-step-label">BuLLSav Twin Engine</div>
+                  <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'ClamAV + Repel consensus'}</div>
                 </div>
               </li>
               <li className={`wb-step ${ingested ? 'is-done' : ''}`}>
@@ -857,7 +994,7 @@ export function Intake({ snap, info }: StepProps) {
                   onClick={() => {
                     demo.loadScanFixture()
                     void run('Load fixture', async () => {})
-                    toast('Loaded Meridian Aerospace RFQ package (21 files). BuLL*Sav scanning triggered.', 'success')
+                    toast('Loaded Meridian Aerospace RFQ package (21 files). BuLLSav scanning triggered.', 'success')
                   }}
                   title="1-click load pre-built industrial RFQ batch with 21 aerospace documents"
                 >
@@ -878,48 +1015,18 @@ export function Intake({ snap, info }: StepProps) {
                 placeholder="Type intake directives (e.g. Extract CAD STEP tolerances, verify 17-4PH certs, calculate Tier-1 EMS SMT rates)..."
               />
 
-              {/* Integrated Action Row inside the Bar */}
-              <div className="intake-command-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <div className="intake-command-left-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <Picker
-                    source="files"
-                    onPick={take}
-                    disabled={!!closed}
-                    className="btn btn-primary sm"
-                    title="Select documents to intake"
-                  >
-                    <Icon name="file" size={12} />
-                    <span>Choose files</span>
-                  </Picker>
-                  <Picker
-                    source="folder"
-                    onPick={take}
-                    disabled={!!closed}
-                    className="btn btn-secondary sm"
-                    title="Upload entire folder"
-                  >
-                    <Icon name="folder" size={12} />
-                    <span>Choose folder</span>
-                  </Picker>
-                  <Picker
-                    source="zip"
-                    onPick={take}
-                    disabled={!!closed}
-                    className="btn btn-secondary sm"
-                    title="Upload archive zip"
-                  >
-                    <Icon name="archive" size={12} />
-                    <span>Upload zip</span>
-                  </Picker>
+              {/* Integrated Minimal Action Row inside the Bar */}
+              <div className="intake-command-actions">
+                <div className="intake-command-left-actions">
                   <button
                     type="button"
-                    className="btn btn-secondary sm"
+                    className="btn btn-primary sm intake-add-btn"
                     disabled={!!closed}
                     onClick={() => setBulk(true)}
-                    title="Open bulk upload assistant"
+                    title="Open Ingest Assistant: Select files, whole folders with nested ZIPs, archives, or bulk enterprise packages"
                   >
-                    <Icon name="upload" size={12} />
-                    <span>Bulk upload</span>
+                    <Icon name="plus" size={13} />
+                    <span>Add / Ingest Files</span>
                   </button>
 
                   {/* Voice Dictation Button */}
@@ -934,6 +1041,12 @@ export function Intake({ snap, info }: StepProps) {
                     <Icon name="bolt" size={11} />
                     <span>{listening ? 'Listening...' : 'Voice'}</span>
                   </button>
+
+                  {/* Drop hint pill */}
+                  <span className="drop-hint-pill" title="Drag and drop documents, folders, or ZIP archives anywhere on screen">
+                    <Icon name="upload" size={10} />
+                    <span>Drop files anywhere</span>
+                  </span>
                 </div>
 
                 <div className="intake-command-right-actions">
@@ -972,7 +1085,7 @@ export function Intake({ snap, info }: StepProps) {
             </div>
           </div>
 
-          {/* Real-time Live 6-Node BuLL*Sav & Repel Animated Scanning Pipeline (Prominently at eye-level directly beneath Command Bar!) */}
+          {/* Real-time Live 5-Node BuLLSav Twin Engine Animated Scanning Pipeline (Prominently at eye-level directly beneath Command Bar!) */}
           <AvStatus uploads={snap.uploads} />
 
           {/* Staged Files Table (when files exist) */}
@@ -992,7 +1105,7 @@ export function Intake({ snap, info }: StepProps) {
                     <span>Clear All</span>
                   </button>
                 </div>
-                <span className="xs tone-ok">✓ BuLL*Sav Protection Active</span>
+                <span className="xs tone-ok">✓ BuLLSav Protection Active</span>
               </div>
               <div className="scroll-box" style={{ maxHeight: '240px' }}>
                 <table className="table scan-table">
@@ -1017,7 +1130,7 @@ export function Intake({ snap, info }: StepProps) {
                           </th>
                           <td>{fmtBytes(u.size)}</td>
                           <td>
-                            <StatusPill status={u.scan === 'verified' ? 'pass' : u.scan === 'blocked' ? 'fail' : 'pending'} text={u.scan === 'verified' ? 'BuLL*Sav Clean' : v.label} />
+                            <StatusPill status={u.scan === 'verified' ? 'pass' : u.scan === 'blocked' ? 'fail' : 'pending'} text={u.scan === 'verified' ? 'BuLLSav Clean' : v.label} />
                           </td>
                           <td className="ta-r">
                             <button
@@ -1143,7 +1256,7 @@ export function Intake({ snap, info }: StepProps) {
           </div>
         </section>
 
-        {/* PANE 3: RIGHT PANE - READINESS & BULL*SAV CORE */}
+        {/* PANE 3: RIGHT PANE - READINESS & BULLSAV CORE */}
         <aside className="intake-pane-right" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Card 1: INTAKE READINESS */}
           <div className="wb-card">
@@ -1188,7 +1301,7 @@ export function Intake({ snap, info }: StepProps) {
                   <span>Security checks</span>
                 </div>
                 <span className={`xs ${released === total && total > 0 ? 'tone-ok' : 'muted'}`}>
-                  {released === total && total > 0 ? 'BuLL*Sav Passed' : total > 0 ? 'Scanning...' : 'Not run'}
+                  {released === total && total > 0 ? 'BuLLSav Passed' : total > 0 ? 'Scanning...' : 'Not run'}
                 </span>
               </li>
               <li className="readiness-item">

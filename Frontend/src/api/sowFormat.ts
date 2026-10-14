@@ -181,7 +181,7 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
 
     reqs.push(
       {
-        instructions: `Watch incoming insurance claim packet intake stream. Enforce dual-engine threat perimeter (BuLL*Sav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Quarantine, verify, and register all ${files.length} claim artifacts into tenant encrypted enclave.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
+        instructions: `Watch incoming insurance claim packet intake stream. Enforce dual-engine threat perimeter (BuLLSav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Quarantine, verify, and register all ${files.length} claim artifacts into tenant encrypted enclave.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
         sourceData: `s3://bam-intake/claims-2026-0147/ (${files.join(', ')})`,
         automation: 'UNSTRUCTURED_TO_SOW_LLM',
         techStack: 'FastMCP, ClamAV, Repel, PostgreSQL',
@@ -247,7 +247,7 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
 
     reqs.push(
       {
-        instructions: `Watch incoming repository and package ingestion stream. Enforce dual-engine threat perimeter (BuLL*Sav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt injection defense). Verify and register all ${files.length} release-ready artifacts into isolated execution workspace.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
+        instructions: `Watch incoming repository and package ingestion stream. Enforce dual-engine threat perimeter (BuLLSav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt injection defense). Verify and register all ${files.length} release-ready artifacts into isolated execution workspace.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
         sourceData: `s3://bam-intake/pkg-2026-0147/ (${files.join(', ')})`,
         automation: 'UNSTRUCTURED_TO_SOW_LLM',
         techStack: 'FastMCP, ClamAV, Repel, PostgreSQL',
@@ -310,7 +310,7 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
 
     reqs.push(
       {
-        instructions: `Watch the RFQ discovery intake bucket and enforce dual-engine threat perimeter (BuLL*Sav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Only verified, released files are registered with the workflow run.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
+        instructions: `Watch the RFQ discovery intake bucket and enforce dual-engine threat perimeter (BuLLSav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Only verified, released files are registered with the workflow run.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
         sourceData: `s3://bam-intake/rfq-2026-0147/ (${files.join(', ')})`,
         automation: 'UNSTRUCTURED_TO_SOW_LLM',
         techStack: 'FastMCP, ClamAV, Repel, PostgreSQL',
@@ -368,7 +368,7 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
     // ---- ENTERPRISE DOCUMENT & DATA INTELLIGENCE DOMAIN ----
     reqs.push(
       {
-        instructions: `Watch the discovery intake bucket and enforce dual-engine threat perimeter (BuLL*Sav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Register all ${files.length} verified objects with the workflow run.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
+        instructions: `Watch the discovery intake bucket and enforce dual-engine threat perimeter (BuLLSav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Register all ${files.length} verified objects with the workflow run.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
         sourceData: `s3://bam-intake/docs-2026-0147/ (${files.join(', ')})`,
         automation: 'UNSTRUCTURED_TO_SOW_LLM',
         techStack: 'FastMCP, ClamAV, Repel, PostgreSQL',

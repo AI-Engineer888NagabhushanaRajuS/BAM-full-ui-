@@ -681,7 +681,7 @@ function RagReview({ snap }: { snap: Snapshot }) {
         </section>
         <section className="rag-card" aria-labelledby="gap-title">
           <header className="rag-card-head"><h3 id="gap-title">Unresolved gaps</h3><span className="tag">{gaps.length}</span></header>
-          {!s.runId ? <p className="muted sm">No RAG run yet. It starts from 1.1 (Start ingestion run) once every BuLL*Sav scan passes.</p>
+          {!s.runId ? <p className="muted sm">No RAG run yet. It starts from 1.1 (Start ingestion run) once every BuLLSav scan passes.</p>
             : gaps.length === 0 ? <p className="muted sm"><Icon name="check" size={12} /> No open gaps in this run.</p>
             : <ul className="gap-list">{gaps.map(g => <li key={g}><Icon name="alert" size={12} />{g}</li>)}</ul>}
           {unclassified.length > 0 && <button className="link sm" onClick={() => goScreen('1.4')}><Icon name="link" size={12} />Review accepted file types in 1.4</button>}
@@ -752,7 +752,7 @@ function OkfBundleCard({ snap }: { snap: Snapshot }) {
         <pre className="okf-preview" aria-label={`Preview of ${open.path}`}><code>{open.content}</code></pre>
       </div>
       {errors.length > 0 && <ul className="gap-list">{errors.map(e => <li key={e}><Icon name="alert" size={12} />{e}</li>)}</ul>}
-      <footer className="rag-card-foot"><span>Provenance: sources are BuLL*Sav-released uploads; entities cite them by footnote. Trust: process:bullsav (machine), 2.2 hand-off (human).</span><span>Stale after 90 days</span></footer>
+      <footer className="rag-card-foot"><span>Provenance: sources are BuLLSav-released uploads; entities cite them by footnote. Trust: process:bullsav (machine), 2.2 hand-off (human).</span><span>Stale after 90 days</span></footer>
     </section>
   )
 }

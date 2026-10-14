@@ -326,7 +326,7 @@ export function AppSettingsModal() {
               <div>
                 <dt>Primary Engine</dt>
                 <dd>
-                  <strong>ClamAV Core (BuLL*Sav)</strong> · <span className="conf">✓ Active</span>
+                  <strong>ClamAV Core (BuLLSav)</strong> · <span className="conf">✓ Active</span>
                   <span className="muted xs" style={{ display: 'block' }}>Signatures v2026.10.09 · Static MD5/SHA-256 &amp; Macro CVE Protection</span>
                 </dd>
               </div>

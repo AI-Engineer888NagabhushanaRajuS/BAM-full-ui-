@@ -467,7 +467,7 @@ export const SOFTWARE_TEMPLATES: CadDrawingTemplate[] = [
     id: 'microservices-arch',
     name: 'Distributed Microservices AST Architecture',
     partNumber: 'ARCH-SERVICES-0147',
-    spec: 'FastMCP · DuckDB · PostgreSQL · BuLL*Sav ClamAV & Repel',
+    spec: 'FastMCP · DuckDB · PostgreSQL · BuLLSav ClamAV & Repel',
     description: 'System architectural blueprint of distributed microservices, dual-engine threat perimeter, AST parser, and WebSocket telemetry stream.',
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="650" viewBox="0 0 900 650" style="background:#090d16;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">
       <rect width="900" height="650" fill="#090d16"/>
@@ -486,7 +486,7 @@ export const SOFTWARE_TEMPLATES: CadDrawingTemplate[] = [
       <rect x="330" y="100" width="240" height="180" rx="6" fill="#1e1b4b" stroke="#a855f7" stroke-width="1.5"/>
       <text x="345" y="130" fill="#c084fc" font-size="12" font-weight="bold">DUAL-ENGINE DEFENSE</text>
       <rect x="345" y="150" width="210" height="40" rx="4" fill="#0f172a"/>
-      <text x="355" y="175" fill="#f8fafc" font-size="11">BuLL*Sav ClamAV (Static)</text>
+      <text x="355" y="175" fill="#f8fafc" font-size="11">BuLLSav ClamAV (Static)</text>
       <rect x="345" y="205" width="210" height="40" rx="4" fill="#0f172a"/>
       <text x="355" y="230" fill="#f8fafc" font-size="11">Repel Heuristic Evasion</text>
 

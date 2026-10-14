@@ -188,7 +188,7 @@ export function IngestionReview({ snap }: { snap: Snapshot }) {
             {rejected.length === 0 ? <p className="muted sm">No file was refused at upload in this session.</p> : <ul className="files">{rejected.map((r, i) => (
               <li key={i} className="file"><Icon name="x" /><div className="file-main"><span className="file-name">{r.name}</span><span className="stage-error xs">{r.reason}</span><span className="muted xs"><Time iso={r.at} /></span></div></li>))}</ul>}
             <p className="muted xs" id="accepted-types"><Icon name="file" size={11} /> Accepted intake types: {ACCEPTED_TYPES.join(', ')}. Anything else is filtered out at upload, and an object whose type has no extraction rule stays Unclassified in RAG.</p>
-            <p className="muted xs"><Icon name="lock" size={11} /> BuLL*Sav verdicts come from the mock scan adapter in this build; the real Digibull Security AntiVirus Engine service (ClamAV core, clamd) replaces it behind the same API.</p>
+            <p className="muted xs"><Icon name="lock" size={11} /> BuLLSav verdicts come from the mock scan adapter in this build; the real Digibull Security AntiVirus Engine service (ClamAV core, clamd) replaces it behind the same API.</p>
           </section>
         </div>
         <section className="rag-card" aria-labelledby="ready-title">

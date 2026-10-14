@@ -309,8 +309,8 @@ export const CHUNK_BYTES = 10 * 1024 * 1024
 export const MAX_UPLOAD_BYTES = MAX_BATCH_BYTES
 export const chunkCount = (size: number) => Math.max(1, Math.ceil(size / CHUNK_BYTES))
 
-/** BuLL*Sav = Digibull Security AntiVirus Engine, the 1.1 scan gate. The scan engine behind it is ClamAV (clamd) in production. */
-export const AV_NAME = 'BuLL*Sav'
+/** BuLLSav = Digibull Security AntiVirus Engine, the 1.1 scan gate. The scan engine behind it is ClamAV (clamd) in production. */
+export const AV_NAME = 'BuLLSav'
 export const AV_VENDOR = 'Digibull Security AntiVirus Engine (ClamAV Core)'
 
 /** Repel = Behavioral Payload & Heuristic Evasion Testing Engine running alongside ClamAV. */

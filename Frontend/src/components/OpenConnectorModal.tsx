@@ -104,7 +104,7 @@ export const DEFAULT_OOMOL_CONNECTORS: OomolConnector[] = [
     color: '#4a154b',
     protocol: 'FastMCP Webhook Proxy',
     actions: ['slack.sendApprovalAlert', 'slack.notifySecurityViolation', 'teams.postAdaptiveCard'],
-    description: 'Instant webhook notifications for BuLL*Sav quarantine threats, pre-flight gate clearance, and executive SOW signoffs.',
+    description: 'Instant webhook notifications for BuLLSav quarantine threats, pre-flight gate clearance, and executive SOW signoffs.',
     connected: true,
     lastPing: 'Live (19ms)',
     latencyMs: 19,

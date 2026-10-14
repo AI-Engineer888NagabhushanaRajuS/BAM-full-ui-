@@ -12,14 +12,25 @@ This backlog tracks ongoing engineering enhancements, architectural migrations, 
 ---
 
 ## ✅ Completed in Recent Sprint (2026-10-14)
+- **BuLLSav Twin Engine (ClamAV Core + Repel Behavioral Shield)**:
+  - Eliminated asterisk across all codebases (`BuLL*Sav` → `BuLLSav`).
+  - Unified ClamAV static signature scanning and Repel heuristic behavioral evasion testing into a consolidated **BuLLSav Twin Engine** node (reducing pipeline from 6 to 5 streamlined stages: Upload & Ingest → Quarantine Sandbox → BuLLSav Twin Engine → AST Inspection → Released).
+  - Designed and rendered an interactive **Git-Branching Accordion** beneath the Twin Engine node visualizing the parallel inspection tracks:
+    - 🌿 `branch: engine/clamav-core` (ClamAV v1.4 static MD5/SHA-256 signatures & macro CVEs)
+    - 🌿 `branch: engine/repel-shield` (Repel behavioral payload repulsion & prompt injection defense)
+    - `git merge`: Unanimous consensus verdict requiring both engines to pass before release.
+- **Minimal Intelligent Intake Command Bar (`.intake-command-bar`)**:
+  - Decluttered the textarea action bar by removing the 4 sprawling inline buttons (`[Choose files]`, `[Choose folder]`, `[Upload zip]`, `[Bulk upload]`).
+  - Replaced with a single sleek `+ Add / Ingest Files` button, native Windows Voice dictation button, and subtle drop hint pill.
+  - Implemented an enhanced **Ingest Mode Modal** (`IngestModal`) with native Drag & Drop landing zone directly inside the dialog and 4 clear modality cards.
+  - Selecting or dropping files in `IngestModal` seamlessly routes into `ReviewDialog` (Uppy-style tile dashboard) for wave inspection and auto-fit before quarantine streaming.
+- **Strict 3-Pane Discipline & Layout Robustness**:
+  - Enforced `min-width: 0;` on `.intake-pane-left`, `.intake-pane-center`, and `.intake-pane-right` with intermediate media breakpoints (`1080px`, `860px`) to prevent 3rd pane ("Intake readiness") from dropping down.
 - **Zero Fake Grounding Scores**: Eliminated hardcoded 0.98 pass on ungrounded/nonsense queries in both `server.ts` and `sowEval.ts`. Ungrounded queries now fail closed with `confidence: 0.10` and `passed: false`.
 - **FDE Preflight Chat ("Ask BullMind") Integration**: Embedded interactive BullMind conversational query bar directly into Stage 2 Cockpit view. Chatting populates Cognee GraphRAG and allows FDEs to endorse verified spec items into the Master Questionnaire battery.
 - **Model & Inference Gating**: Enforced model requirement before RAG & SOW progression. Added dynamic support for free OpenRouter models (`google/gemini-2.0-flash-exp:free`, `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-72b-instruct:free`) with live `/test-key` verification and prominent preflight warning banner.
-- **Strict 3-Pane Discipline**: Fixed CSS media query wrapping that caused 3rd pane ("Intake readiness") to wrap beneath the workbench on screens $\le 1280$px. Maintained clean 3-column side-by-side layout across all desktop viewports.
-- **Sleek Stepper Redesign**: Modernized bloated stage buttons into luxury `.tracker-pill` pills with circular checkmark badges, chevron dividers, and compact floating subtask drawer.
 - **Settings Modal Layout & Zero Cut-Off**: Fixed dialog overflow, horizontal scrollbars, and clipped tab labels in `AppSettingsModal`.
 - **Fullscreen Preview**: Added 1-click Fullscreen toggle to SOW draft editor and Excel masters for distraction-free document & workbook editing.
-- **Multi-Modality Ingestion Assistant**: Built 4-card assistant (`BulkDialog`) covering single/multi-files, project folders with nested ZIPs, direct ZIP archives, and bulk 1,000-file packages.
 - **Environment Selector Modernization**: Replaced misleading "Staging" label with "Client" vs "FDE" engineering mode.
 
 ---

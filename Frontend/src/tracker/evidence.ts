@@ -1,6 +1,6 @@
 // Tracker status from real workflow evidence (backend snapshot + RAG pipeline). Pure, so it is unit tested.
 // Completion follows saved reviews, checks and gates, never a route visit. Stage 1 completes from the intake
-// gates alone (upload, BuLL*Sav verdicts, release, hand-off to RAG), so all four screens finish automatically.
+// gates alone (upload, BuLLSav verdicts, release, hand-off to RAG), so all four screens finish automatically.
 import type { Snapshot, StepState } from '../api/types'
 import type { RagState } from '../rag/ragPipeline.ts'
 import type { TrackerStatus } from './trackerConfig.ts'
@@ -76,7 +76,7 @@ export function previousRun(snap: Snapshot, rag: RagState): string[] {
 export const DONE_RULE: Record<string, string> = {
   '1.1': 'Done when the verified batch is handed to RAG (Start ingestion run).',
   '1.2': 'Done when every file has left the upload and scan queue without a failure.',
-  '1.3': 'Done when every file has a final BuLL*Sav verdict and is released from quarantine.',
+  '1.3': 'Done when every file has a final BuLLSav verdict and is released from quarantine.',
   '1.4': 'Done when the ingestion run hands the verified batch to RAG.',
   '2.1': 'Done when the Cognee graph build of the current RAG run finishes.',
   '2.2': 'Done when a schema from the current RAG run is sent to the Workbench.',
