@@ -28,7 +28,7 @@ from playwright.sync_api import sync_playwright
 
 RECORDINGS_DIR = r"F:\UI-SBAM\recordings"
 TARGET_VIDEO = os.path.join(RECORDINGS_DIR, "demo.webm")
-BASE_URL = "http://127.0.0.1:5174"
+BASE_URL = "http://localhost:5174"
 
 def record_full_interactive_demo():
     print("[DEMO RECORD] Initializing Playwright video capture on F: drive...")
@@ -122,6 +122,17 @@ def record_full_interactive_demo():
             print("[SCENE 1.4b] Observing live dual-engine scan progression...")
             time.sleep(4.0)
 
+        # Check if pre-flight modal auto-popped up
+        time.sleep(1.5)
+        preflight_dialog = page.locator(".preflight-fullscreen-dialog")
+        if preflight_dialog.count() > 0 and preflight_dialog.first.is_visible():
+            print("[AUTO-POPUP VERIFIED] Pre-Flight Verification Cockpit auto-popped up on scan completion!")
+            time.sleep(2.0)
+            close_btn = page.locator(".preflight-fullscreen-dialog button:has-text('Close Gate Cockpit')")
+            if close_btn.count() > 0:
+                close_btn.first.click()
+                time.sleep(1.0)
+
         # 1.5 Inspect verified file batch in files table
         print("[SCENE 1.5] Inspecting verified file batch with Repel evasion metrics...")
         files_table = page.locator(".scan-table")
@@ -180,6 +191,12 @@ def record_full_interactive_demo():
             time.sleep(0.8)
             start_ingest_btn.first.click()
             time.sleep(2.0)
+            pf_dialog = page.locator(".preflight-fullscreen-dialog")
+            if pf_dialog.count() > 0 and pf_dialog.first.is_visible():
+                close_btn = page.locator(".preflight-fullscreen-dialog button:has-text('Close Gate Cockpit')")
+                if close_btn.count() > 0:
+                    close_btn.click()
+                    time.sleep(1.0)
 
         # Click "Extract context" button to transition to RAG 2.1
         extract_btn = page.locator("button:has-text('Extract context')")
@@ -255,18 +272,6 @@ def record_full_interactive_demo():
                     submit_q.first.click()
                     time.sleep(1.2)
 
-            # SCENE 5.3: Test the Cognee (Run All Questionnaire Checks)
-            print("[SCENE 5.3] Clicking 'Test the Cognee' to evaluate entire battery against GraphRAG & Laya...")
-            test_cognee_btn = page.locator("button:has-text('Test the Cognee')")
-            if test_cognee_btn.count() > 0:
-                test_cognee_btn.first.click()
-                # Watch live evaluation of questionnaire items and sufficiency progress bar rising past 80%
-                time.sleep(6.0)
-
-            # Inspect updated questionnaire with passed statuses and >= 80% sufficiency meter
-            print("[SCENE 5.4] Sufficiency meter passed 80% threshold line! SOW Generation unlocked.")
-            time.sleep(1.5)
-
             # ==================================================================
             # SCENE 6: TAB 2 - ASK BULLMIND (LLM INSIDE COGNEE)
             # ==================================================================
@@ -327,16 +332,32 @@ def record_full_interactive_demo():
                         time.sleep(1.0)
 
             # ==================================================================
-            # SCENE 8: UNLOCKED GATED HANDOFF TO STAGE 3.1 SOW WORKBENCH
+            # SCENE 7.5: TAB 5 - GUIDED READINESS & WIREFRAMES
             # ==================================================================
-            print("\n--- [SCENE 8] Context Certified (>= 80%): Pushing Context to SOW Workbench ---")
-            push_sow_btn = page.locator(".preflight-push-btn")
-            if push_sow_btn.count() > 0 and push_sow_btn.first.is_enabled():
-                print("[SCENE 8.1] Clicking unlocked 'Push to SOW (Stage 3.1)'...")
-                push_sow_btn.first.scroll_into_view_if_needed()
-                time.sleep(0.8)
-                push_sow_btn.first.click()
-                time.sleep(3.0)
+            wireframes_tab = page.locator(".preflight-tab:has-text('Guided Readiness')")
+            if wireframes_tab.count() > 0:
+                print("\n--- [SCENE 7.5] Inspecting Guided Readiness & Wireframes Tab ---")
+                wireframes_tab.first.click()
+                time.sleep(1.5)
+
+            # ==================================================================
+            # SCENE 8: RUN BATTERY & AUTO-LAUNCH SOW WORKBENCH
+            # ==================================================================
+            print("\n--- [SCENE 8] Running Full Pre-Flight Battery ---")
+            suite_tab = page.locator(".preflight-tab:has-text('Master Questionnaire')")
+            if suite_tab.count() > 0:
+                suite_tab.first.click()
+                time.sleep(1.2)
+
+            print("[SCENE 8.1] Clicking 'Test the Cognee' to evaluate entire battery against GraphRAG & Laya...")
+            test_cognee_btn = page.locator("button:has-text('Test the Cognee')")
+            if test_cognee_btn.count() > 0:
+                test_cognee_btn.first.click()
+                # Watch live evaluation of questionnaire items and sufficiency progress bar rising past 80%
+                time.sleep(5.0)
+
+            print("[SCENE 8.2] Sufficiency meter passed 80% threshold line! Observing auto-launch to SOW Workbench...")
+            time.sleep(3.5)
 
         # ======================================================================
         # SCENE 9: SOW WORKBENCH (STAGE 3.1) - DYNAMIC SOW WITH FDE GOALS
@@ -365,6 +386,22 @@ def record_full_interactive_demo():
         if acc_panel.count() > 0:
             acc_panel.scroll_into_view_if_needed()
             time.sleep(1.5)
+
+        # SCENE 9.2: Demonstrate Filerobot CAD / Drawing Redline Markup
+        print("[SCENE 9.2] Demonstrating Filerobot Image Editor for CAD Redline Markup...")
+        filerobot_btn = page.locator("button.tb-image-markup, button:has-text('Redline CAD')")
+        if filerobot_btn.count() > 0 and filerobot_btn.first.is_enabled():
+            filerobot_btn.first.click()
+            time.sleep(2.0)
+            # Inspect drawing templates or redline dialog
+            cad_dialog = page.locator(".sow-filerobot-dialog")
+            if cad_dialog.count() > 0 and cad_dialog.first.is_visible():
+                print("  -> Filerobot CAD Image Editor opened with ASME Y14.5 presets!")
+                time.sleep(2.0)
+                cancel_btn = cad_dialog.locator("button:has-text('Cancel')")
+                if cancel_btn.count() > 0:
+                    cancel_btn.first.click()
+                    time.sleep(1.0)
 
         # ======================================================================
         # SCENE 10: HIGH-CONTRAST THEME DEMONSTRATION

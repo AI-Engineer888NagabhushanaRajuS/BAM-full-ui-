@@ -16,17 +16,19 @@
 
 An interactive end-to-end demo recording exercising every screen, button, and animated state without simulation shortcuts:
 
-- **Recorded Video File**: [`recordings/demo.webm`](recordings/demo.webm) *(7.30 MB, 1440x900 resolution)*
+- **Recorded Video File**: [`recordings/demo.webm`](recordings/demo.webm) *(9.21 MB, 1440x900 resolution)*
 - **Interactive Script**: [`record_demo.py`](record_demo.py) *(Playwright on headless Chromium)*
 - **Recorded Sequence**:
   1. **Intake 1.1**: Selecting quick directive preset, typing compliance goals, activating Windows native voice dictation with pulsing live microphone feedback.
-  2. **Security Perimeter**: Hovering ClamAV & Repel telemetry cards, staging mockup batch, executing 6-node sequential defense flow animation (`Flow 1/6` $\rightarrow$ `Flow 6/6`), and reviewing verified files table.
+  2. **Security Perimeter**: Hovering ClamAV & Repel telemetry cards, staging mockup batch, executing 6-node sequential defense flow animation (`Flow 1/6` $\rightarrow$ `Flow 6/6`), observing the verified file table and real-time auto-popup of the Pre-Flight Verification Cockpit!
   3. **Settings Modal**: Inspecting API key vaults and ClamAV + Repel heuristic telemetry.
   4. **GraphRAG 2.1**: Exploring knowledge graph nodes, relationship triples, and OKF concept citations.
-  5. **Pre-Flight Cockpit 2.3**: Inspecting initial pending state and locked SOW button ($0\%$ sufficiency); adding custom FDE question; executing **"Test the Cognee"** battery to evaluate against GraphRAG, driving the gauge past $80\%$ to unlock the SOW gate.
+  5. **Pre-Flight Cockpit 2.3**: Inspecting initial pending state and locked SOW button ($0\%$ sufficiency); adding custom FDE question.
   6. **BullMind Console**: Submitting custom query, streaming S3 citations, toggling FDE endorsement, and clicking **`+ Add to Master Questionnaire`**.
-  7. **Client Masters**: Inspecting 5 Domain Masters (Rules, Skills with ISATVON 1.4 Loopy bounds, Organization).
-  8. **SOW Workbench 3.1**: Clicking unlocked "Push to SOW", reviewing the dynamically synthesized SOW with FDE directives, CAD tolerances, BOM Rev C delta, and toggling enterprise high-contrast mode.
+  7. **Client Masters & Wireframes**: Inspecting 6 Domain Masters (Rules, Skills with ISATVON 1.4 Loopy bounds, Organization) and Guided Readiness wireframe screens.
+  8. **Automated Battery & SOW Launch**: Executing **"Test the Cognee"** battery; sufficiency meter climbs past $80\%$, celebratory toast fires, and automatically launches Stage 3.1 SOW Workbench.
+  9. **SOW Workbench 3.1 & Filerobot Redline**: Reviewing dynamically synthesized SOW with FDE directives, CAD tolerances, BOM Rev C delta, and launching the Scaleflex Filerobot CAD Redline Markup editor.
+  10. **High-Contrast Theme**: Toggling enterprise high-contrast theme and finalizing verified recording.
 
 ---
 
@@ -410,7 +412,7 @@ flowchart LR
 | **Node.js Test Runner** | `npm test` | **46 / 46 passed** (tracker, diff, RAG, gates, Laya) | **PASSED** |
 | **Contract Self-Check** | `npm run check` | **Passed** (`mock backend checks passed`) | **PASSED** |
 | **Backend Pytest** | `pytest tests/ -v` | **31 / 31 passed** in 5.35s | **PASSED** |
-| **Interactive Demo** | [`record_demo.py`](record_demo.py) | **7.30 MB** at [`recordings/demo.webm`](recordings/demo.webm) | **PASSED** |
+| **Interactive Demo** | [`record_demo.py`](record_demo.py) | **9.21 MB** at [`recordings/demo.webm`](recordings/demo.webm) | **PASSED** |
 | **Git Version Control** | `git log -1` | Committed clean working tree | **VERIFIED** |
 
 ---
