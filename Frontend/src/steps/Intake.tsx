@@ -430,14 +430,19 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
             </span>
           </div>
 
-          {/* Connected Micro-Nodes Rail ("just a Line of components") */}
+          {/* Connected Micro-Nodes Rail ("Line of components" - compact non-overlapping indicators) */}
           <div className="av-strip-rail" aria-hidden="true">
             {nodes.map((n, idx) => (
-              <span key={n.label} className={`av-rail-node is-${n.st}`}>
+              <span key={n.label} className={`av-rail-node is-${n.st}`} title={`Stage ${idx + 1} (${n.label}): ${n.count}`}>
                 <span className="av-rail-dot">
-                  <Icon name={n.st === 'done' ? 'check' : n.st === 'alert' ? 'alert' : n.icon} size={9} />
+                  {n.st === 'done' ? (
+                    <Icon name="check" size={8} />
+                  ) : n.st === 'alert' ? (
+                    <Icon name="alert" size={8} />
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
                 </span>
-                <span className="av-rail-label">{n.label}</span>
                 {idx < nodes.length - 1 && <span className="av-rail-line" />}
               </span>
             ))}
@@ -499,21 +504,23 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
         </div>
       </div>
 
-      {/* Dedicated Full Inspection Modal Dialog matching ReviewDialog pattern */}
-      <SecurityInspectionModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        state={state}
-        isSimulating={isSimulating}
-        animatingStep={animatingStep}
-        title={title}
-        sub={sub}
-        pct={pct}
-        nodes={nodes}
-        resolved={resolved}
-        inScanCount={inScan.length}
-        onSimulate={() => runSequentialFlow(1)}
-      />
+      {/* Dedicated Full Inspection Modal Dialog - ONLY mounted when open! */}
+      {showModal && (
+        <SecurityInspectionModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          state={state}
+          isSimulating={isSimulating}
+          animatingStep={animatingStep}
+          title={title}
+          sub={sub}
+          pct={pct}
+          nodes={nodes}
+          resolved={resolved}
+          inScanCount={inScan.length}
+          onSimulate={() => runSequentialFlow(1)}
+        />
+      )}
     </>
   )
 }
@@ -546,6 +553,7 @@ function SecurityInspectionModal({
   inScanCount: number
   onSimulate: () => void
 }) {
+  if (!open) return null
   return (
     <Dialog
       open={open}
@@ -1054,20 +1062,9 @@ export function Intake({ snap, info }: StepProps) {
               </div>
             )}
 
-            {/* Adaptive Intake Action */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => setBulk(true)}
-                disabled={!!closed}
-                className="btn btn-primary sm"
-                style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
-                title="Open Bulk Ingestion Assistant: Select files, multi-files, whole folders with nested ZIPs, or standalone archives"
-              >
-                <Icon name="plus" size={12} />
-                <span>Add Documents / Folder</span>
-              </button>
-              {total > 0 && (
+            {/* Clear staged files action if files exist */}
+            {total > 0 && (
+              <div style={{ marginTop: '6px' }}>
                 <button
                   type="button"
                   className="btn btn-ghost sm"
@@ -1078,8 +1075,8 @@ export function Intake({ snap, info }: StepProps) {
                   <Icon name="trash" size={11} />
                   <span>Clear Staged Files ({total})</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Card 3: PIPELINE STATUS */}
@@ -1221,24 +1218,6 @@ export function Intake({ snap, info }: StepProps) {
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Directive Chips */}
-            <div className="fde-goals-presets" style={{ marginTop: '2px' }}>
-              {PRESETS.map((p, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="prompt-chip"
-                  onClick={() => {
-                    const next = goals.includes(p) ? goals : goals.trim() ? `${goals.trim()}; ${p}` : p
-                    saveGoals(next)
-                  }}
-                  style={{ fontSize: '11px', padding: '3px 8px' }}
-                >
-                  {p}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -1391,26 +1370,6 @@ export function Intake({ snap, info }: StepProps) {
             </div>
           )}
 
-          {/* Bottom Action Row (Image 2) */}
-          <div className="row" style={{ gap: '10px', alignItems: 'center', marginTop: '4px' }}>
-            <GateButton
-              action="ingest"
-              reason={starting ? undefined : !modelStatus.ready ? modelStatus.reason : block}
-              busy={starting}
-              successKey={snap.ingestion?.runId}
-              onClick={start}
-              variant="primary"
-            >
-              Start ingestion run
-            </GateButton>
-            <button
-              type="button"
-              className="btn btn-ghost sm"
-              onClick={() => { saveGoals(''); toast('Reset completed.', 'info') }}
-            >
-              Reset form
-            </button>
-          </div>
         </section>
 
         {/* PANE 3: RIGHT PANE - READINESS & BULLSAV CORE */}
@@ -1533,7 +1492,7 @@ export function Intake({ snap, info }: StepProps) {
             <div style={{ marginTop: '8px' }}>
               <GateButton
                 action="ingest"
-                reason={starting ? undefined : block}
+                reason={starting ? undefined : !modelStatus.ready ? modelStatus.reason : block}
                 busy={starting}
                 successKey={snap.ingestion?.runId}
                 onClick={start}

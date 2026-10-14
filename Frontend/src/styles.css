@@ -742,6 +742,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Smooth open/close for every dialog (native <dialog>, top layer). */
 .dialog { opacity: 0; transform: translateY(10px) scale(.98);
   transition: opacity .2s ease, transform .2s ease, overlay .2s ease allow-discrete, display .2s ease allow-discrete; }
+dialog:not([open]) { display: none !important; opacity: 0 !important; pointer-events: none !important; }
 .dialog[open] { opacity: 1; transform: none; }
 @starting-style { .dialog[open] { opacity: 0; transform: translateY(10px) scale(.98); } }
 .dialog::backdrop { transition: opacity .2s ease, overlay .2s ease allow-discrete, display .2s ease allow-discrete; opacity: 0; }
@@ -1238,16 +1239,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 5px 12px;
+  gap: 8px;
+  padding: 4px 10px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 92%, var(--surface-2));
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
   cursor: pointer;
-  min-height: 38px;
+  min-height: 36px;
   user-select: none;
+  overflow: hidden;
 }
 
 .av-strip:hover {
@@ -1273,19 +1275,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .av-strip-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: none;
+  min-width: 0;
 }
 
 .av-strip-radar {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   color: var(--accent);
+  flex: none;
 }
 
 .av-strip-clear .av-strip-radar {
@@ -1301,31 +1305,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .av-strip-name {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .av-strip-rail {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex: 1;
+  gap: 4px;
+  flex: none;
   justify-content: center;
-  min-width: 0;
-  max-width: 520px;
-  margin: 0 8px;
+  margin: 0 4px;
 }
 
 .av-rail-node {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  transition: color .2s ease;
+  gap: 4px;
+  flex: none;
 }
 
 .av-rail-node.is-done {
@@ -1345,13 +1345,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .av-rail-dot {
   display: grid;
   place-items: center;
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--surface-2);
   border: 1px solid var(--border-strong);
   color: var(--muted);
-  font-size: 9px;
+  font-size: 8.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   flex: none;
   transition: all .2s ease;
 }
@@ -1376,7 +1378,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .av-rail-line {
-  width: 14px;
+  width: 8px;
   height: 1.5px;
   background: var(--border-strong);
   border-radius: 1px;
@@ -1493,16 +1495,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--muted);
   text-align: right;
   padding-top: 2px;
-}
-
-@media (max-width: 900px) {
-  .av-rail-label {
-    display: none;
-  }
-  .av-strip-rail {
-    max-width: 200px;
-    gap: 4px;
-  }
 }
 
 @media (max-width: 600px) {
