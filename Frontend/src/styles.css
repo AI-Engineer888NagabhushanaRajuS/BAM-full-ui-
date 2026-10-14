@@ -2940,3 +2940,614 @@ body { transition: background-color .4s ease, color .4s ease; }
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+/* ===== Futuristic HUD Timeline Stepper ======================== */
+.tracker.hud-tracker {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background: rgba(11, 17, 32, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.hud-tracker-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 24px;
+  min-height: 48px;
+}
+
+.hud-timeline-rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.hud-track-line-bg {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.hud-track-line-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #00F0FF 100%);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-stages-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.hud-stage-cell {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 280px;
+}
+
+.hud-stage-node {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 12px 6px 8px;
+  border-radius: 4px;
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.hud-stage-node:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(0, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.hud-stage-node.is-active {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: #00F0FF;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.25), inset 0 0 8px rgba(0, 240, 255, 0.08);
+}
+
+.hud-stage-node.is-open {
+  border-color: #00F0FF;
+}
+
+.hud-node-num {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.hud-node-num.active {
+  background: #00F0FF;
+  color: #0B1120;
+  border-color: #00F0FF;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.hud-node-num.done {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+.hud-node-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-node-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: auto;
+  line-height: 1.3;
+}
+
+.hud-node-badge.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: #00F0FF;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  font-weight: 700;
+}
+
+.hud-node-badge.done {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+}
+
+.hud-node-badge.count {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+
+.hud-node-chev {
+  color: var(--muted);
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.hud-node-chev.up {
+  transform: rotate(180deg);
+  color: #00F0FF;
+}
+
+/* Inline Subroutine HUD Strip */
+.hud-subroutine-strip {
+  padding: 6px 24px 8px;
+  background: rgba(10, 15, 29, 0.96);
+  border-top: 1px solid rgba(0, 240, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  animation: hud-slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes hud-slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hud-subroutine-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 1720px;
+  margin: 0 auto;
+}
+
+.hud-subroutine-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #00F0FF;
+  white-space: nowrap;
+  padding: 2px 7px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+}
+
+.hud-tag-pulse {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00F0FF;
+  box-shadow: 0 0 6px #00F0FF;
+  animation: hud-tag-ping 1.5s infinite;
+}
+
+@keyframes hud-tag-ping {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.hud-subroutine-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hud-subroutine-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.hud-sub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.hud-sub-chip:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(0, 240, 255, 0.3);
+  color: var(--text);
+}
+
+.hud-sub-chip.is-current {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: #00F0FF;
+  color: #00F0FF;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+}
+
+.hud-sub-num {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.hud-sub-label {
+  font-size: 11px;
+}
+
+.hud-sub-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-sub-dot.is-active {
+  background: #00F0FF;
+  box-shadow: 0 0 6px #00F0FF;
+}
+
+.hud-sub-dot.is-done {
+  background: #10b981;
+  color: #fff;
+  width: 12px;
+  height: 12px;
+}
+
+.hud-sub-close {
+  height: 24px;
+  padding: 0 6px;
+  color: var(--muted);
+}
+
+.hud-status-popover {
+  margin-top: 6px;
+  animation: hud-slide-down 0.15s ease;
+}
+
+/* ===== Dynamic Workspace Layout & 3-Pane Styles ===== */
+.intake-workbench {
+  display: grid;
+  grid-template-columns: minmax(230px, 260px) minmax(0, 1fr) minmax(300px, 330px);
+  gap: 16px;
+  align-items: start;
+  transition: grid-template-columns 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.intake-workbench.left-collapsed {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(300px, 330px);
+}
+
+/* Collapsible Left Mini-Rail */
+.hud-mini-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 6px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.hud-mini-rail-toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-mini-rail-toggle:hover {
+  border-color: #00F0FF;
+  color: #00F0FF;
+}
+
+.hud-mini-rail-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.hud-mini-node {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.hud-mini-node.is-active {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: #00F0FF;
+  color: #00F0FF;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+.hud-mini-node.is-ok {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.hud-mini-rail-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* Vertical Timeline on Left Pane */
+.hud-vertical-timeline {
+  position: relative;
+  padding-left: 6px;
+}
+
+.hud-vertical-timeline::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 17px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 1;
+}
+
+.hud-v-step {
+  position: relative;
+  z-index: 2;
+}
+
+.hud-v-node {
+  position: relative;
+  z-index: 3;
+}
+
+/* Center Pane: HUD Command Console */
+.hud-command-console {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+  transition: all 0.2s ease;
+}
+
+.hud-command-console:focus-within {
+  border-color: rgba(0, 240, 255, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(0, 240, 255, 0.08) !important;
+}
+
+.hud-console-badge {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  color: #00F0FF;
+}
+
+.hud-directive-pill {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+}
+
+.hud-terminal-glow {
+  background: rgba(0, 240, 255, 0.1) !important;
+  border: 1px solid rgba(0, 240, 255, 0.3) !important;
+  color: #00F0FF !important;
+}
+
+.hud-terminal-textarea {
+  font-family: inherit;
+  background: rgba(10, 15, 29, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text) !important;
+  transition: all 0.2s ease;
+}
+
+.hud-terminal-textarea:focus {
+  border-color: #00F0FF !important;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15) !important;
+  outline: none;
+}
+
+.hud-primary-glow {
+  background: linear-gradient(135deg, #00F0FF 0%, #0284c7 100%) !important;
+  color: #0B1120 !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 2px 10px rgba(0, 240, 255, 0.35) !important;
+}
+
+.hud-primary-glow:hover {
+  filter: brightness(1.1) !important;
+}
+
+/* Sticky Right Status Rail */
+.hud-sticky-rail {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+}
+
+/* Circular SVG Progress Ring Gauge */
+.hud-readiness-gauge {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(10, 15, 29, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hud-gauge-visual {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: none;
+}
+
+.hud-gauge-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud-gauge-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 5.5;
+}
+
+.hud-gauge-progress {
+  fill: none;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 38px 38px;
+  transition: stroke-dashoffset 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-gauge-progress.is-high {
+  stroke: #10b981;
+}
+
+.hud-gauge-progress.is-mid {
+  stroke: #00F0FF;
+}
+
+.hud-gauge-progress.is-low {
+  stroke: #f59e0b;
+}
+
+.hud-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hud-gauge-pct {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.hud-gauge-sub {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.hud-gauge-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hud-gauge-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* Sufficiency mini-bars */
+.suff-card-mini-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.suff-card-mini-bar div {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+

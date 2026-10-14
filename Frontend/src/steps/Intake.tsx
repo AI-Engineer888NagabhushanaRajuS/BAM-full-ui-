@@ -690,6 +690,51 @@ function SecurityInspectionModal({
   )
 }
 
+function ReadinessCircularGauge({ pct, total }: { pct: number; total: number }) {
+  const r = 30
+  const c = 38
+  const circum = 2 * Math.PI * r // ~188.5
+  const offset = circum * (1 - Math.min(100, Math.max(0, pct)) / 100)
+  const isHigh = pct >= 80
+  const isMid = pct >= 50
+
+  return (
+    <div className="hud-readiness-gauge">
+      <div className="hud-gauge-visual">
+        <svg width="76" height="76" viewBox="0 0 76 76" className="hud-gauge-svg">
+          <circle cx={c} cy={c} r={r} className="hud-gauge-bg" />
+          <circle
+            cx={c}
+            cy={c}
+            r={r}
+            className={`hud-gauge-progress ${isHigh ? 'is-high' : isMid ? 'is-mid' : 'is-low'}`}
+            style={{
+              strokeDasharray: circum,
+              strokeDashoffset: offset,
+            }}
+          />
+        </svg>
+        <div className="hud-gauge-center">
+          <span className="hud-gauge-pct font-mono">{pct}%</span>
+          <span className="hud-gauge-sub font-mono">READY</span>
+        </div>
+      </div>
+      <div className="hud-gauge-meta">
+        <strong className="hud-gauge-title font-mono">
+          {pct >= 80 ? 'PRE-FLIGHT READY' : total > 0 ? 'ASSESSING READINESS' : 'AWAITING DOCUMENTS'}
+        </strong>
+        <p className="xs muted" style={{ margin: '2px 0 0 0', lineHeight: 1.35 }}>
+          {pct >= 80
+            ? 'Sufficiency threshold met (≥80%). Pre-Flight verification gate unlocked.'
+            : total > 0
+            ? 'Staged documents are being evaluated for graph grounding.'
+            : 'Add documents and objectives to assess sufficiency and coverage.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /** 1.1 Intake console with Three-Pane Workbench */
 export function Intake({ snap, info }: StepProps) {
   const rag = useRag(s => s)
@@ -700,6 +745,7 @@ export function Intake({ snap, info }: StepProps) {
   const [outcome, setOutcome] = useState<ScanOutcome>('clean')
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
 
   // Directives state
   const fdeGoals = useUi(s => s.fdeGoals ?? '')
@@ -986,122 +1032,166 @@ export function Intake({ snap, info }: StepProps) {
       </header>
 
       {/* Three-Pane Workbench Grid */}
-      <div className="intake-workbench">
-        {/* PANE 1: LEFT PANE - CONTEXT & SOURCE DOCUMENTS */}
-        <aside className="intake-pane-left" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: THIS INTAKE */}
-          <div className="wb-card">
-            <div className="wb-card-head">
-              <span className="xs muted" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>This Intake</span>
+      <div className={`intake-workbench ${leftCollapsed ? 'left-collapsed' : ''}`}>
+        {/* PANE 1: LEFT PANE - CONTEXT & SOURCE DOCUMENTS (Collapsible Timeline) */}
+        <aside className={`intake-pane-left ${leftCollapsed ? 'is-collapsed' : ''}`}>
+          {leftCollapsed ? (
+            /* Sleek Collapsed HUD Mini-Rail */
+            <div className="hud-mini-rail">
+              <button
+                type="button"
+                className="hud-mini-rail-toggle"
+                onClick={() => setLeftCollapsed(false)}
+                title="Expand intake steps & staged documents"
+              >
+                <Icon name="chevron" size={12} />
+              </button>
+              <div className="hud-mini-rail-nodes">
+                <span className={`hud-mini-node ${total > 0 && fdeGoals.trim() ? 'is-ok' : 'is-active'}`} title="1.1 Objective & documents">
+                  {total > 0 && fdeGoals.trim() ? '✓' : '1.1'}
+                </span>
+                <span className={`hud-mini-node ${released === total && total > 0 ? 'is-ok' : pending.length > 0 ? 'is-active' : ''}`} title="1.2 BuLLSav Twin Engine">
+                  {released === total && total > 0 ? '✓' : '1.2'}
+                </span>
+                <span className={`hud-mini-node ${ingested ? 'is-ok' : ''}`} title="1.3 RAG hand-off">
+                  {ingested ? '✓' : '1.3'}
+                </span>
+              </div>
+              <div className="hud-mini-rail-badge" title={`${total} staged documents`}>
+                <Icon name="file" size={11} />
+                <span className="font-mono">{total}</span>
+              </div>
             </div>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text)' }}>New intake</h3>
-              <span className="xs muted">{total > 0 ? `${total} document${total === 1 ? '' : 's'} staged` : 'No documents added yet'}</span>
-            </div>
-
-            {/* Stepper */}
-            <ol className="wb-stepper">
-              <li className={`wb-step ${total > 0 && fdeGoals.trim() ? 'is-done' : 'is-active'}`}>
-                <span className="wb-step-num">{total > 0 && fdeGoals.trim() ? '✓' : '1'}</span>
-                <div>
-                  <div className="wb-step-label">Objective &amp; documents</div>
-                  <div className="wb-step-sub">{total > 0 ? `${total} files selected` : 'Define scope & files'}</div>
+          ) : (
+            /* Full Expanded Left Pane */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Card 1: INTAKE PIPELINE */}
+              <div className="wb-card">
+                <div className="wb-card-head">
+                  <span className="xs muted font-mono" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    INTAKE PIPELINE
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost sm"
+                    onClick={() => setLeftCollapsed(true)}
+                    title="Collapse sidebar to icon mini-rail"
+                    style={{ height: '22px', padding: '0 6px', fontSize: '11px', color: 'var(--muted)' }}
+                  >
+                    <Icon name="chevron" size={10} style={{ transform: 'rotate(180deg)' }} />
+                    <span>Collapse</span>
+                  </button>
                 </div>
-              </li>
-              <li className={`wb-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
-                <span className="wb-step-num">{released === total && total > 0 ? '✓' : '2'}</span>
                 <div>
-                  <div className="wb-step-label">BuLLSav Twin Engine</div>
-                  <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'ClamAV + Repel consensus'}</div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text)' }}>New intake</h3>
+                  <span className="xs muted">{total > 0 ? `${total} document${total === 1 ? '' : 's'} staged` : 'No documents added yet'}</span>
                 </div>
-              </li>
-              <li className={`wb-step ${ingested ? 'is-done' : ''}`}>
-                <span className="wb-step-num">{ingested ? '✓' : '3'}</span>
-                <div>
-                  <div className="wb-step-label">RAG hand-off</div>
-                  <div className="wb-step-sub">{ingested ? 'Context extracted' : 'Cognee Graph & OKF'}</div>
-                </div>
-              </li>
-            </ol>
-          </div>
 
-          {/* Card 2: SOURCE DOCUMENTS */}
-          <div className="wb-card">
-            <div className="wb-card-head">
-              <h4 className="wb-card-title">Source documents</h4>
-              {total > 0 && <span className="badge sm">{total}</span>}
-            </div>
-            <p className="xs muted" style={{ margin: 0 }}>
-              {total > 0 ? 'Quarantined and verified files staged for ingestion.' : 'Your uploaded files will appear here.'}
-            </p>
-
-            {/* Compact File List if uploads exist */}
-            {total > 0 && (
-              <div className="wb-file-list">
-                {snap.uploads.slice(0, 6).map(u => (
-                  <div key={u.id} className="wb-file-item">
-                    <div className="row" style={{ alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
-                      <Icon name="file" size={12} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={u.name}>
-                        {u.name}
-                      </span>
+                {/* Vertical Timeline */}
+                <ol className="wb-stepper hud-vertical-timeline">
+                  <li className={`wb-step hud-v-step ${total > 0 && fdeGoals.trim() ? 'is-done' : 'is-active'}`}>
+                    <span className="wb-step-num hud-v-node">{total > 0 && fdeGoals.trim() ? '✓' : '1'}</span>
+                    <div>
+                      <div className="wb-step-label">Objective &amp; documents</div>
+                      <div className="wb-step-sub">{total > 0 ? `${total} files selected` : 'Define scope & files'}</div>
                     </div>
-                    <span className="xs muted" style={{ flex: 'none' }}>{fmtBytes(u.size)}</span>
+                  </li>
+                  <li className={`wb-step hud-v-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
+                    <span className="wb-step-num hud-v-node">{released === total && total > 0 ? '✓' : '2'}</span>
+                    <div>
+                      <div className="wb-step-label">BuLLSav Twin Engine</div>
+                      <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'ClamAV + Repel consensus'}</div>
+                    </div>
+                  </li>
+                  <li className={`wb-step hud-v-step ${ingested ? 'is-done' : ''}`}>
+                    <span className="wb-step-num hud-v-node">{ingested ? '✓' : '3'}</span>
+                    <div>
+                      <div className="wb-step-label">RAG hand-off</div>
+                      <div className="wb-step-sub">{ingested ? 'Context extracted' : 'Cognee Graph & OKF'}</div>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Card 2: SOURCE DOCUMENTS */}
+              <div className="wb-card">
+                <div className="wb-card-head">
+                  <h4 className="wb-card-title">Source documents</h4>
+                  {total > 0 && <span className="badge sm font-mono">{total}</span>}
+                </div>
+                <p className="xs muted" style={{ margin: 0 }}>
+                  {total > 0 ? 'Quarantined and verified files staged for ingestion.' : 'Your uploaded files will appear here.'}
+                </p>
+
+                {/* Compact File List if uploads exist */}
+                {total > 0 && (
+                  <div className="wb-file-list">
+                    {snap.uploads.slice(0, 6).map(u => (
+                      <div key={u.id} className="wb-file-item">
+                        <div className="row" style={{ alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                          <Icon name="file" size={12} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={u.name}>
+                            {u.name}
+                          </span>
+                        </div>
+                        <span className="xs muted font-mono" style={{ flex: 'none' }}>{fmtBytes(u.size)}</span>
+                        <button
+                          type="button"
+                          className="icon-btn sm"
+                          onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1 })}
+                          title="Remove file"
+                          style={{ width: '20px', height: '20px' }}
+                        >
+                          <Icon name="x" size={10} />
+                        </button>
+                      </div>
+                    ))}
+                    {total > 6 && <span className="xs muted ta-r font-mono">+{total - 6} more files</span>}
+                  </div>
+                )}
+
+                {/* Clear staged files action if files exist */}
+                {total > 0 && (
+                  <div style={{ marginTop: '6px' }}>
                     <button
                       type="button"
-                      className="icon-btn sm"
-                      onClick={() => run('Remove file', () => api.removeUpload(u.id), { step: 1 })}
-                      title="Remove file"
-                      style={{ width: '20px', height: '20px' }}
+                      className="btn btn-ghost sm"
+                      onClick={emergencyReset}
+                      style={{ width: '100%', justifyContent: 'center', color: 'var(--err)', fontSize: '11.5px', gap: '6px' }}
+                      title="Clear all staged files and reset memory"
                     >
-                      <Icon name="x" size={10} />
+                      <Icon name="trash" size={11} />
+                      <span>Clear Staged Files ({total})</span>
                     </button>
                   </div>
-                ))}
-                {total > 6 && <span className="xs muted ta-r">+{total - 6} more files</span>}
+                )}
               </div>
-            )}
 
-            {/* Clear staged files action if files exist */}
-            {total > 0 && (
-              <div style={{ marginTop: '6px' }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost sm"
-                  onClick={emergencyReset}
-                  style={{ width: '100%', justifyContent: 'center', color: 'var(--err)', fontSize: '11.5px', gap: '6px' }}
-                  title="Clear all staged files and reset memory"
-                >
-                  <Icon name="trash" size={11} />
-                  <span>Clear Staged Files ({total})</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Card 3: PIPELINE STATUS */}
-          <div className="wb-card">
-            <div className="wb-card-head">
-              <h4 className="wb-card-title">Pipeline Status</h4>
-              <span className={`badge sm ${released === total && total > 0 ? 'badge-ok' : ''}`}>
-                {released === total && total > 0 ? 'Verified' : pending.length > 0 ? 'Scanning' : 'Ready'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div className="row" style={{ justifyContent: 'space-between', fontSize: '11.5px' }}>
-                <span className="muted">Ingestion Pipeline</span>
-                <span style={{ fontWeight: 600 }}>{released === total && total > 0 ? '3 of 3 ready' : total > 0 ? '2 of 3 active' : '1 of 3 pending'}</span>
-              </div>
-              <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-3)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${released === total && total > 0 ? 100 : total > 0 ? 66 : 25}%`,
-                  background: released === total && total > 0 ? 'var(--ok)' : 'var(--accent)',
-                  transition: 'width 0.3s ease'
-                }} />
+              {/* Card 3: PIPELINE STATUS */}
+              <div className="wb-card">
+                <div className="wb-card-head">
+                  <h4 className="wb-card-title">Pipeline Status</h4>
+                  <span className={`badge sm ${released === total && total > 0 ? 'badge-ok' : ''}`}>
+                    {released === total && total > 0 ? 'Verified' : pending.length > 0 ? 'Scanning' : 'Ready'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div className="row" style={{ justifyContent: 'space-between', fontSize: '11.5px' }}>
+                    <span className="muted">Ingestion Pipeline</span>
+                    <span className="font-mono" style={{ fontWeight: 600 }}>{released === total && total > 0 ? '3 of 3 ready' : total > 0 ? '2 of 3 active' : '1 of 3 pending'}</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-3)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${released === total && total > 0 ? 100 : total > 0 ? 66 : 25}%`,
+                      background: released === total && total > 0 ? 'var(--ok)' : 'var(--accent)',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* PANE 2: CENTER PANE - INTAKE ASSISTANT & DROPZONE */}
@@ -1109,7 +1199,10 @@ export function Intake({ snap, info }: StepProps) {
           {/* Header row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Intake assistant</h3>
+              <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Intake assistant</h3>
+                <span className="hud-console-badge font-mono">WORKSPACE CORE</span>
+              </div>
               <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Describe the job. Your documents and checks stay in view.</p>
             </div>
             <button
@@ -1123,17 +1216,20 @@ export function Intake({ snap, info }: StepProps) {
             </button>
           </div>
 
-          {/* Central Intelligent Intake Command Bar */}
-          <div className="wb-card intake-command-bar">
+          {/* Central Intelligent Intake Command Bar (HUD Console) */}
+          <div className="wb-card intake-command-bar hud-command-console">
             <div className="intake-command-header">
               <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
-                <div className="command-bar-icon-box">
+                <div className="command-bar-icon-box hud-terminal-glow">
                   <Icon name="bolt" size={15} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                    Intelligent Intake &amp; Objective Command
-                  </h4>
+                  <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                      Intelligent Intake &amp; Objective Command
+                    </h4>
+                    <span className="hud-directive-pill font-mono">FDE DIRECTIVE</span>
+                  </div>
                   <span className="xs muted">
                     Set scope &amp; constraints · Speak, type, or drop files anywhere on screen
                   </span>
@@ -1162,7 +1258,7 @@ export function Intake({ snap, info }: StepProps) {
             <div className="intake-command-input-container">
               <textarea
                 id="fde-obj-input"
-                className="intake-command-textarea"
+                className="intake-command-textarea hud-terminal-textarea"
                 rows={2}
                 value={goals}
                 onChange={e => saveGoals(e.target.value)}
@@ -1174,7 +1270,7 @@ export function Intake({ snap, info }: StepProps) {
                 <div className="intake-command-left-actions">
                   <button
                     type="button"
-                    className="btn btn-primary sm intake-add-btn"
+                    className="btn btn-primary sm intake-add-btn hud-primary-glow"
                     disabled={!!closed}
                     onClick={() => setBulk(true)}
                     title="Open Ingest Assistant: Select files, whole folders with nested ZIPs, archives, or bulk enterprise packages"
@@ -1204,7 +1300,7 @@ export function Intake({ snap, info }: StepProps) {
                 </div>
 
                 <div className="intake-command-right-actions">
-                  <span className={`xs ${goals.trim() ? 'tone-ok' : 'muted'}`} style={{ marginRight: '6px' }}>
+                  <span className={`xs ${goals.trim() ? 'tone-ok' : 'muted'} font-mono`} style={{ marginRight: '6px' }}>
                     {goals.trim() ? '✓ Saved' : 'No objective'}
                   </span>
                   <button
@@ -1372,25 +1468,53 @@ export function Intake({ snap, info }: StepProps) {
 
         </section>
 
-        {/* PANE 3: RIGHT PANE - READINESS & BULLSAV CORE */}
-        <aside className="intake-pane-right" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: INTAKE READINESS */}
-          <div className="wb-card">
+        {/* PANE 3: RIGHT PANE - STICKY READINESS & BULLSAV CORE */}
+        <aside className="intake-pane-right hud-sticky-rail" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Card 1: INTAKE READINESS WITH CIRCULAR SVG GAUGE */}
+          <div className="wb-card hud-readiness-card">
             <div className="wb-card-head">
               <h4 className="wb-card-title">Intake readiness</h4>
-              <span className="badge sm">{total} docs</span>
-            </div>
-            <div>
-              <strong style={{ fontSize: '13px', color: 'var(--text)' }}>
-                {total > 0 ? 'Assessing readiness' : 'Awaiting documents'}
-              </strong>
-              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>
-                Add documents to assess sufficiency, coverage and quality.
-              </p>
+              <span className="badge sm font-mono">{total} docs</span>
             </div>
 
-            {/* Checklist (Image 1) */}
-            <ul className="readiness-list">
+            {/* Circular SVG Gauge */}
+            <ReadinessCircularGauge pct={overallReadiness} total={total} />
+
+            {/* Sufficiency Metric Cards */}
+            <div style={{ marginTop: '6px' }}>
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span className="xs muted font-mono" style={{ fontWeight: 600, letterSpacing: '0.04em' }}>
+                  SUFFICIENCY METRICS
+                </span>
+                <span className="xs font-mono tone-accent">{overallReadiness}%</span>
+              </div>
+              <div className="sufficiency-grid">
+                <div className="suff-card">
+                  <span className="suff-card-label">Sources</span>
+                  <span className="suff-card-val font-mono">{sourcesPct}%</span>
+                  <div className="suff-card-mini-bar">
+                    <div style={{ width: `${sourcesPct}%`, background: sourcesPct >= 80 ? 'var(--ok)' : sourcesPct >= 50 ? 'var(--accent)' : 'var(--warn)' }} />
+                  </div>
+                </div>
+                <div className="suff-card">
+                  <span className="suff-card-label">Coverage</span>
+                  <span className="suff-card-val font-mono">{coveragePct}%</span>
+                  <div className="suff-card-mini-bar">
+                    <div style={{ width: `${coveragePct}%`, background: coveragePct >= 80 ? 'var(--ok)' : coveragePct >= 50 ? 'var(--accent)' : 'var(--warn)' }} />
+                  </div>
+                </div>
+                <div className="suff-card">
+                  <span className="suff-card-label">Quality</span>
+                  <span className="suff-card-val font-mono">{qualityPct}%</span>
+                  <div className="suff-card-mini-bar">
+                    <div style={{ width: `${qualityPct}%`, background: qualityPct >= 80 ? 'var(--ok)' : qualityPct >= 50 ? 'var(--accent)' : 'var(--warn)' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Checklist */}
+            <ul className="readiness-list" style={{ marginTop: '8px' }}>
               <li className="readiness-item">
                 <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
                   <span className={`readiness-dot ${fdeGoals.trim() ? 'is-ok' : ''}`}>
@@ -1398,7 +1522,7 @@ export function Intake({ snap, info }: StepProps) {
                   </span>
                   <span>Objective</span>
                 </div>
-                <span className={`xs ${fdeGoals.trim() ? 'tone-ok' : 'muted'}`}>{fdeGoals.trim() ? 'Saved' : 'Not saved'}</span>
+                <span className={`xs ${fdeGoals.trim() ? 'tone-ok font-mono' : 'muted'}`}>{fdeGoals.trim() ? 'Saved' : 'Not saved'}</span>
               </li>
               <li className="readiness-item">
                 <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
@@ -1407,7 +1531,7 @@ export function Intake({ snap, info }: StepProps) {
                   </span>
                   <span>Documents</span>
                 </div>
-                <span className={`xs ${total > 0 ? 'tone-ok' : 'muted'}`}>{total > 0 ? `${total} added` : 'Not added'}</span>
+                <span className={`xs ${total > 0 ? 'tone-ok font-mono' : 'muted'}`}>{total > 0 ? `${total} added` : 'Not added'}</span>
               </li>
               <li className="readiness-item">
                 <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
@@ -1416,7 +1540,7 @@ export function Intake({ snap, info }: StepProps) {
                   </span>
                   <span>Security checks</span>
                 </div>
-                <span className={`xs ${released === total && total > 0 ? 'tone-ok' : 'muted'}`}>
+                <span className={`xs ${released === total && total > 0 ? 'tone-ok font-mono' : 'muted'}`}>
                   {released === total && total > 0 ? 'BuLLSav Passed' : total > 0 ? 'Scanning...' : 'Not run'}
                 </span>
               </li>
@@ -1427,36 +1551,11 @@ export function Intake({ snap, info }: StepProps) {
                   </span>
                   <span>RAG hand-off</span>
                 </div>
-                <span className={`xs ${ingested ? 'tone-ok' : released === total && total > 0 ? 'tone-ok' : 'muted'}`}>
+                <span className={`xs ${ingested ? 'tone-ok font-mono' : released === total && total > 0 ? 'tone-ok font-mono' : 'muted'}`}>
                   {ingested ? 'Ingested' : released === total && total > 0 ? 'Ready' : 'Not started'}
                 </span>
               </li>
             </ul>
-
-            {/* Sufficiency Metric Cards (Image 2) */}
-            <div style={{ marginTop: '4px' }}>
-              <div className="row" style={{ justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span className="xs muted" style={{ fontWeight: 600 }}>Sufficiency Check</span>
-                <span className="xs font-mono">{overallReadiness}%</span>
-              </div>
-              <div className="sufficiency-grid">
-                <div className="suff-card">
-                  <span className="suff-card-label">Sources</span>
-                  <span className="suff-card-val">{sourcesPct}%</span>
-                </div>
-                <div className="suff-card">
-                  <span className="suff-card-label">Coverage</span>
-                  <span className="suff-card-val">{coveragePct}%</span>
-                </div>
-                <div className="suff-card">
-                  <span className="suff-card-label">Quality</span>
-                  <span className="suff-card-val">{qualityPct}%</span>
-                </div>
-              </div>
-              <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-3)', overflow: 'hidden', marginTop: '8px' }}>
-                <div style={{ height: '100%', width: `${overallReadiness}%`, background: 'var(--accent)', transition: 'width 0.3s ease' }} />
-              </div>
-            </div>
 
             {/* Quick Pre-Flight Verification Gate Launcher */}
             {(() => {
@@ -1501,14 +1600,14 @@ export function Intake({ snap, info }: StepProps) {
                 Start ingestion run
               </GateButton>
             </div>
-            <span className="xs muted ta-c" style={{ fontSize: '10.5px' }}>
+            <span className="xs muted ta-c font-mono" style={{ fontSize: '10px' }}>
               Available after required inputs and checks pass.
             </span>
 
             {/* Minimal Activity Log Link */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px 0', borderTop: '1px solid var(--border)', fontSize: '11px', marginTop: '6px' }}>
-              <span className="muted">Activity: {snap.scanEvents.length} events logged</span>
-              <button type="button" className="link xs" onClick={() => setShowLogs(true)}>
+              <span className="muted font-mono">Activity: {snap.scanEvents.length} events logged</span>
+              <button type="button" className="link xs font-mono" onClick={() => setShowLogs(true)}>
                 View log &gt;
               </button>
             </div>
