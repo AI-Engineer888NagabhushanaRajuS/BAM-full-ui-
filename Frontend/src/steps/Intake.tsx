@@ -42,6 +42,11 @@ const HOWTO: { key: Exclude<Source, 'drop'>; icon: string; title: string; button
     'Quarantine sandbox decompresses packages for deep heuristic & AST virus scanning.',
     `A ZIP can use the whole ${MB(MAX_UPLOAD_BYTES)} batch quota.`,
   ] },
+  { key: 'files', icon: 'upload', title: 'Bulk Mixed Packages', button: 'Bulk upload', steps: [
+    'Multi-batch streaming for enterprise RFQ bundles up to 1,000 files.',
+    'Supports mixed CAD geometry, BOM workbooks, engineering threads and nested ZIPs.',
+    'Automated batch wave pipelining into BuLL*Sav zero-trust quarantine.',
+  ] },
 ]
 
 function Picker({ source, onPick, children, disabled, className = 'btn btn-secondary sm', style, title }: {
@@ -757,16 +762,17 @@ export function Intake({ snap, info }: StepProps) {
 
             {/* Adaptive Intake Action */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-              <Picker
-                source="files"
-                onPick={take}
+              <button
+                type="button"
+                onClick={() => setBulk(true)}
                 disabled={!!closed}
                 className="btn btn-primary sm"
                 style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
+                title="Open Bulk Ingestion Assistant: Select files, multi-files, whole folders with nested ZIPs, or standalone archives"
               >
                 <Icon name="plus" size={12} />
                 <span>Add Documents / Folder</span>
-              </Picker>
+              </button>
               {total > 0 && (
                 <button
                   type="button"

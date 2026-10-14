@@ -687,6 +687,34 @@ export function CogneePreflightCockpit({ onPushToSowSuccess }: { onPushToSowSucc
         </div>
       </header>
 
+      {/* Model & API Key Gate Banner if not configured */}
+      {!modelStatus.ready && (
+        <div className="model-gate-banner" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          background: 'color-mix(in srgb, var(--accent) 12%, var(--surface-2))',
+          border: '1px solid var(--accent)', borderRadius: '8px', padding: '10px 16px', margin: '0 24px 14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>⚡</span>
+            <div>
+              <strong style={{ fontSize: '12.5px', color: 'var(--text)' }}>JEV System-1 Confidence &amp; Inference Model Required</strong>
+              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>
+                {modelStatus.reason || 'Configure your OpenRouter API key to unlock live Jev grounding confidence scoring, or select a Free tier model (Llama-3.3 70B, Gemini 2.0 Flash Exp, DeepSeek R1).'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary sm"
+            onClick={() => openSettings('keys')}
+            style={{ flex: 'none', height: '28px', fontSize: '11.5px', fontWeight: 600 }}
+          >
+            <Icon name="bolt" size={11} />
+            <span>Setup Model &amp; API Key</span>
+          </button>
+        </div>
+      )}
+
       {/* Segmented Cockpit Tabs */}
       <nav className="preflight-tab-bar" aria-label="Verification view selector">
         <div className="preflight-tabs" role="tablist">
@@ -796,6 +824,39 @@ export function CogneePreflightCockpit({ onPushToSowSuccess }: { onPushToSowSucc
                 <span>100%</span>
               </div>
             </div>
+          </div>
+
+          {/* Ask BullMind Interactive FDE Query Bar */}
+          <div className="cockpit-bullmind-bar" style={{ padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Icon name="sparkle" size={13} style={{ color: 'var(--accent)' }} />
+                <strong style={{ fontSize: '12.5px', color: 'var(--text)' }}>Ask BullMind (LLM inside Cognee GraphRAG)</strong>
+                <span className="xs muted">· Chat to verify facts, test grounding &amp; expand knowledge graph</span>
+              </div>
+              <span className="xs muted mono">{fdeHistory.length} queries logged</span>
+            </div>
+            <form className="fde-query-form" onSubmit={handleFdeAsk} style={{ display: 'flex', gap: '8px' }}>
+              <div className="fde-input-wrapper" style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0 10px', height: '34px' }}>
+                <input
+                  id="fde-suite-query-input"
+                  className="fde-input"
+                  type="text"
+                  placeholder="Ask BullMind to verify any spec (e.g. 17-4PH housing certs, tolerances ±0.1mm, SMT line rate, payment terms)…"
+                  value={fdeQuery}
+                  onChange={e => setFdeQuery(e.target.value)}
+                  disabled={askingFde}
+                  style={{ width: '100%', border: 'none', background: 'transparent', color: 'var(--text)', outline: 'none', fontSize: '12.5px' }}
+                />
+                {fdeQuery && (
+                  <button type="button" className="icon-btn xs" onClick={() => setFdeQuery('')}><Icon name="x" size={10} /></button>
+                )}
+              </div>
+              <button type="submit" className="btn btn-primary sm" disabled={!fdeQuery.trim() || askingFde} style={{ height: '34px', fontSize: '12px' }}>
+                <Icon name={askingFde ? 'spinner' : 'sparkle'} size={12} spin={askingFde} />
+                <span>{askingFde ? 'Verifying…' : 'Ask BullMind'}</span>
+              </button>
+            </form>
           </div>
 
           {/* Questionnaire Toolbar */}

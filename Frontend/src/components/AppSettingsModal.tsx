@@ -18,7 +18,34 @@ export function AppSettingsModal() {
   const [apiKey, setApiKey] = useState<string>('')
   const [showKey, setShowKey] = useState<boolean>(false)
   const [savingKey, setSavingKey] = useState<boolean>(false)
+  const [testingKey, setTestingKey] = useState<boolean>(false)
   const [loadingModels, setLoadingModels] = useState<boolean>(false)
+
+  const handleTestApiKey = async () => {
+    const trimmed = apiKey.trim()
+    if (!trimmed) {
+      toast('Please enter an OpenRouter API key first.', 'error')
+      return
+    }
+    setTestingKey(true)
+    try {
+      const res = await fetch('/laya/test-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: trimmed }),
+      })
+      const data = await res.json() as { valid?: boolean; message?: string; error?: string }
+      if (data.valid) {
+        toast('✓ OpenRouter API Key Verified & Connected!', 'success')
+      } else {
+        toast(`API Key check: ${data.error || 'Key invalid'}`, 'error')
+      }
+    } catch (e) {
+      toast(`Verification call failed: ${(e as Error).message}`, 'error')
+    } finally {
+      setTestingKey(false)
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -116,7 +143,7 @@ export function AppSettingsModal() {
             className={`settings-tab ${activeTab === 'engines' ? 'active' : ''}`}
             onClick={() => setActiveTab('engines')}
           >
-            <Icon name="bolt" size={13} /> Decision Engines
+            <Icon name="bolt" size={13} /> Models &amp; Free Tier
           </button>
           <button
             role="tab"
@@ -132,39 +159,53 @@ export function AppSettingsModal() {
             className={`settings-tab ${activeTab === 'telemetry' ? 'active' : ''}`}
             onClick={() => setActiveTab('telemetry')}
           >
-            <Icon name="shield" size={13} /> Quarantine &amp; Security Telemetry
+            <Icon name="shield" size={13} /> Quarantine Security
           </button>
         </div>
 
-        {/* Tab 1: AI Decision Engines */}
+        {/* Tab 1: AI Decision Engines & Free Tier */}
         {activeTab === 'engines' && (
           <div className="settings-tab-content">
-            <p className="sm muted" style={{ margin: '0 0 12px 0' }}>
-              Select the primary model used by Jev (System-1 IP context sufficiency) and Laya (Stage 3.1 SOW accuracy judge).
+            <p className="sm muted" style={{ margin: '0 0 10px 0' }}>
+              Select the primary inference engine used by Jev (System-1 context sufficiency &amp; grounding confidence) and Laya (Stage 3.1 SOW accuracy judge).
             </p>
 
             <div className="engine-options-list">
-              <label
-                className={`engine-card ${activeModel === 'openrouter' ? 'selected' : ''}`}
-                onClick={() => handleSelectModel('openrouter')}
-              >
-                <div className="engine-card-head">
-                  <div className="engine-title-row">
-                    <input
-                      type="radio"
-                      name="decision-engine"
-                      checked={activeModel === 'openrouter'}
-                      onChange={() => handleSelectModel('openrouter')}
-                    />
-                    <strong>Google Gemini 2.5 Flash (Cloud via OpenRouter)</strong>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0 2px' }}>
+                ⭐ OpenRouter Free Tier Models (Zero Ingestion Cost)
+              </div>
+              {[
+                { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash Exp [Free]', desc: 'Experimental flash reasoning model. Zero cost with OpenRouter API key.' },
+                { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct [Free]', desc: 'High capability open weights model. Excellent for AST parsing and complex SOW synthesis.' },
+                { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 Reasoning [Free]', desc: 'Full chain-of-thought mathematical reasoning model on OpenRouter free tier.' },
+                { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'Alibaba Qwen 2.5 72B Instruct [Free]', desc: 'Deep multilingual & code understanding free tier model.' },
+              ].map(m => (
+                <label
+                  key={m.id}
+                  className={`engine-card ${activeModel === m.id ? 'selected' : ''}`}
+                  onClick={() => handleSelectModel(m.id)}
+                >
+                  <div className="engine-card-head">
+                    <div className="engine-title-row">
+                      <input
+                        type="radio"
+                        name="decision-engine"
+                        checked={activeModel === m.id}
+                        onChange={() => handleSelectModel(m.id)}
+                      />
+                      <strong>{m.name}</strong>
+                    </div>
+                    <StatusPill status={apiKey ? 'pass' : 'needs_review'} text={apiKey ? 'Free · Active' : 'Key Required'} />
                   </div>
-                  <StatusPill status={apiKey ? 'pass' : 'needs_review'} text={apiKey ? 'Active' : 'Key Required'} />
-                </div>
-                <p className="xs muted" style={{ margin: '4px 0 0 20px' }}>
-                  Ultra-low latency reasoning model on OpenRouter. Handles live GraphRAG evaluation, pre-flight context checks, and contract accuracy scoring.
-                </p>
-              </label>
+                  <p className="xs muted" style={{ margin: '4px 0 0 20px' }}>
+                    {m.desc}
+                  </p>
+                </label>
+              ))}
 
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 2px' }}>
+                💻 Local &amp; Calibrated Engines
+              </div>
               <label
                 className={`engine-card ${activeModel === 'laya-onnx' ? 'selected' : ''}`}
                 onClick={() => handleSelectModel('laya-onnx')}
@@ -177,7 +218,7 @@ export function AppSettingsModal() {
                       checked={activeModel === 'laya-onnx'}
                       onChange={() => handleSelectModel('laya-onnx')}
                     />
-                    <strong>Local Laya ONNX Runtime (Offline / Edge)</strong>
+                    <strong>Local Laya ONNX Runtime (ModernBERT Local / Edge)</strong>
                   </div>
                   <StatusPill status="pass" text="Local" />
                 </div>
@@ -254,8 +295,18 @@ export function AppSettingsModal() {
                 >
                   <Icon name="check" size={12} /> Save Key
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary sm"
+                  onClick={handleTestApiKey}
+                  disabled={testingKey || !apiKey.trim()}
+                  title="Test API Key against OpenRouter authentication endpoint"
+                >
+                  <Icon name={testingKey ? 'spinner' : 'bolt'} size={12} spin={testingKey} />
+                  <span>{testingKey ? 'Testing…' : 'Test Key Live'}</span>
+                </button>
                 {apiKey && (
-                  <button type="button" className="btn btn-secondary sm" onClick={handleClearKey}>
+                  <button type="button" className="btn btn-ghost sm" onClick={handleClearKey}>
                     Clear Key
                   </button>
                 )}

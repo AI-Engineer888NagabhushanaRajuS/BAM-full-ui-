@@ -77,6 +77,7 @@ function SowEditor({ sow, editable, info, uploadedFiles }: { sow: Sow; editable:
   const [imageEditorOpen, setImageEditorOpen] = useState(false)
   const [editingImageSrc, setEditingImageSrc] = useState<string | undefined>(undefined)
   const [editingImageCaption, setEditingImageCaption] = useState<string | undefined>(undefined)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const { busy, run } = useAction()
 
   const handleOpenImageEditor = () => {
@@ -166,7 +167,7 @@ function SowEditor({ sow, editable, info, uploadedFiles }: { sow: Sow; editable:
   const editsText = cmp.kind === 'none' ? 'First version: nothing to compare' : `${edits ? `${edits} change${edits === 1 ? '' : 's'}` : 'No changes'} · ${cmp.from} → ${cmp.to}`
 
   return (
-    <Pane id="center-title" kicker="3.1 · Human review" title="SOW draft" className="center"
+    <Pane id="center-title" kicker="3.1 · Human review" title="SOW draft" className={`center ${isFullscreen ? 'is-fullscreen' : ''}`}
       actions={<span className="row">
         <label className="switch" title="Colour-code changes in the document">
           <input type="checkbox" role="switch" checked={showDiff} onChange={e => setShowDiff(e.target.checked)} />
@@ -180,6 +181,16 @@ function SowEditor({ sow, editable, info, uploadedFiles }: { sow: Sow; editable:
           </select>
         </label>
         <span className={`edits-chip ${edits ? 'has' : ''}`}>{editsText}</span>
+        <button
+          type="button"
+          className={`btn xs ${isFullscreen ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setIsFullscreen(f => !f)}
+          title="Toggle Fullscreen Document View"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', borderRadius: '4px' }}
+        >
+          <Icon name="expand" size={11} />
+          <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+        </button>
         {info.editable && sow.status !== 'regenerating' && (
           <button
             type="button"

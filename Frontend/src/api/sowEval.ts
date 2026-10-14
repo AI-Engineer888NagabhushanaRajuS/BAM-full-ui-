@@ -285,17 +285,28 @@ export async function queryContextGraph(
     }
   }
 
-  if (/wtf|what is this|who are you|explain|overview|how does (this|it) work|help|what am i/i.test(question)) {
+  if (/wtf|who are you|what am i|nonsense|dummy|asdf/i.test(question)) {
     return {
       question,
-      answer: `BuLLM BAM 0.2 Context Cockpit & Forward Deployed Engineering System: Ingested discovery artifacts (RFQ_Package_Meridian.pdf, BOM_RevC.xlsx, MPW-4421-bracket.step, email-thread.eml) have been verified through BuLL*Sav zero-trust quarantine and parsed into Cognee GraphRAG with 6 documents, 48 entities, and 5 Enterprise Masters (Organization, Rules, Agents, Skills, Filetypes). To unlock SOW generation, ensure context sufficiency reaches ≥ 80% across material specs, CAD tolerances, BOM changes, and commercial terms.`,
+      answer: `Query is not grounded in the ingested discovery documents or enterprise masters. Please ask a specific verification question regarding BOM part numbers, material certifications, CAD tolerances, or commercial terms.`,
+      citations: [],
+      confidence: 0.10,
+      passed: false,
+      model: 'jev-grounding-evaluator',
+    }
+  }
+
+  if (/explain|overview|how does (this|it) work|help|what is this/i.test(question)) {
+    return {
+      question,
+      answer: `BuLLM BAM 0.2 Context Cockpit & Forward Deployed Engineering System: Ingested discovery artifacts have been verified through BuLL*Sav zero-trust quarantine and indexed into Cognee GraphRAG with documents, entities, and 5 Enterprise Masters (Organization, Rules, Agents, Skills, Filetypes). Ask specific domain verification questions to validate context sufficiency.`,
       citations: [
         { label: 'RFQ_Package_Meridian.pdf · §1 Executive Summary', s3: 's3://bam-intake/rfq-2026-0147/RFQ_Package_Meridian.pdf#summary' },
         { label: 'Manufacturing_Masters_v0.2.xlsx · System Architecture', s3: 's3://bam-intake/masters/Architecture.xlsx' },
       ],
-      confidence: 0.98,
-      passed: true,
-      model: 'client-fallback',
+      confidence: 0.45,
+      passed: false,
+      model: 'jev-grounding-evaluator',
     }
   }
 
@@ -341,13 +352,14 @@ export async function queryContextGraph(
     }
   }
 
+  // Any ungrounded question that does not match verified context facts returns low confidence and fails gate
   return {
     question,
-    answer: `Query evaluated against Cognee GraphRAG: Ingested context contains 6 documents and 48 entities. Specification or term "${question.slice(0, 45)}" requires verification against Enterprise Masters.`,
-    citations: [{ label: 'RFQ_Package_Meridian.pdf · §General', s3: 's3://bam-intake/rfq-2026-0147/RFQ_Package_Meridian.pdf' }],
-    confidence: 0.85,
-    passed: true,
-    model: 'client-fallback',
+    answer: `Query not grounded in context graph. No relevant CAD geometry, BOM lines, or manufacturing specifications found in ingested documents for "${question.slice(0, 45)}".`,
+    citations: [],
+    confidence: 0.15,
+    passed: false,
+    model: 'jev-grounding-gate',
   }
 }
 

@@ -472,8 +472,20 @@ Respond ONLY with valid JSON with this exact schema:
           },
         ]
 
-        // 1. Meta / conversational & architectural questions (e.g. wtf is this, what is this, explain, architecture, overview)
-        if (/wtf|what is this|who are you|explain|overview|how does (this|it) work|help|what am i/i.test(q)) {
+        // 1. Meta / conversational & architectural questions (ungrounded / test queries fail closed)
+        if (/wtf|who are you|what am i|nonsense|dummy|asdf/i.test(q)) {
+          return send(res, 200, {
+            question: q,
+            answer: `Query is not grounded in the ingested discovery documents or enterprise masters. Please ask a specific verification question regarding BOM part numbers, material certifications, CAD tolerances, or commercial terms.`,
+            citations: [],
+            confidence: 0.10,
+            passed: false,
+            model: activeModelId.includes('/') ? `openrouter:${activeModelId}` : activeModelId,
+            ms: Date.now() - t0,
+          })
+        }
+
+        if (/explain|overview|how does (this|it) work|help|what is this/i.test(q)) {
           return send(res, 200, {
             question: q,
             answer: `BuLLM BAM 0.2 Context Cockpit & Forward Deployed Engineering System: Ingested discovery artifacts (RFQ_Package_Meridian.pdf, BOM_RevC.xlsx, MPW-4421-bracket.step, email-thread.eml) have been verified through BuLL*Sav zero-trust quarantine and parsed into Cognee GraphRAG with 6 documents, 48 entities, and 5 Enterprise Masters (Organization, Rules, Agents, Skills, Filetypes). To unlock SOW generation, ensure context sufficiency reaches ≥ 80% across material specs, CAD tolerances, BOM changes, and commercial terms.`,
@@ -481,8 +493,8 @@ Respond ONLY with valid JSON with this exact schema:
               { label: 'RFQ_Package_Meridian.pdf · §1 Executive Summary', s3: 's3://bam-intake/rfq-2026-0147/RFQ_Package_Meridian.pdf#summary' },
               { label: 'Manufacturing_Masters_v0.2.xlsx · System Architecture', s3: 's3://bam-intake/masters/Architecture.xlsx' },
             ],
-            confidence: 0.98,
-            passed: true,
+            confidence: 0.45,
+            passed: false,
             model: activeModelId.includes('/') ? `openrouter:${activeModelId}` : activeModelId,
             ms: Date.now() - t0,
           })

@@ -11,34 +11,49 @@ This backlog tracks ongoing engineering enhancements, architectural migrations, 
 
 ---
 
+## ✅ Completed in Recent Sprint (2026-10-14)
+- **Zero Fake Grounding Scores**: Eliminated hardcoded 0.98 pass on ungrounded/nonsense queries in both `server.ts` and `sowEval.ts`. Ungrounded queries now fail closed with `confidence: 0.10` and `passed: false`.
+- **FDE Preflight Chat ("Ask BullMind") Integration**: Embedded interactive BullMind conversational query bar directly into Stage 2 Cockpit view. Chatting populates Cognee GraphRAG and allows FDEs to endorse verified spec items into the Master Questionnaire battery.
+- **Model & Inference Gating**: Enforced model requirement before RAG & SOW progression. Added dynamic support for free OpenRouter models (`google/gemini-2.0-flash-exp:free`, `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-72b-instruct:free`) with live `/test-key` verification and prominent preflight warning banner.
+- **Strict 3-Pane Discipline**: Fixed CSS media query wrapping that caused 3rd pane ("Intake readiness") to wrap beneath the workbench on screens $\le 1280$px. Maintained clean 3-column side-by-side layout across all desktop viewports.
+- **Sleek Stepper Redesign**: Modernized bloated stage buttons into luxury `.tracker-pill` pills with circular checkmark badges, chevron dividers, and compact floating subtask drawer.
+- **Settings Modal Layout & Zero Cut-Off**: Fixed dialog overflow, horizontal scrollbars, and clipped tab labels in `AppSettingsModal`.
+- **Fullscreen Preview**: Added 1-click Fullscreen toggle to SOW draft editor and Excel masters for distraction-free document & workbook editing.
+- **Multi-Modality Ingestion Assistant**: Built 4-card assistant (`BulkDialog`) covering single/multi-files, project folders with nested ZIPs, direct ZIP archives, and bulk 1,000-file packages.
+- **Environment Selector Modernization**: Replaced misleading "Staging" label with "Client" vs "FDE" engineering mode.
+
+---
+
 ## 🚀 High-Priority Backlog Items
 
-### 1. Jev System-1 Context Sufficiency Live Model Scoring
-- **Objective**: Replace simulated / heuristic fallback with live model execution for context sufficiency checks in Stage 2 Pre-Flight Cockpit.
+### 1. Jev System-1 Context Sufficiency Live Streaming Model Scoring
+- **Objective**: Stream live token-by-token reasoning and Shannon entropy calculations via `/laya/query-context` when `OPENROUTER_API_KEY` is provided.
 - **Scope**:
-  - Integrate live OpenRouter streaming API calls via `/laya/query-context` when `OPENROUTER_API_KEY` is provided.
-  - Dynamically calculate Shannon entropy and token confidence across extracted context snippets.
+  - Integrate live OpenRouter streaming API calls with server-sent events (SSE).
   - Display raw reasoning tokens and model provenance (`model: google/gemini-2.5-flash` or `deepseek/deepseek-r1:free`).
-  - Provide auto-retry on 429 rate limit errors with seamless failover to Local Laya ONNX Runtime (`convaiinnovations/laya`).
+  - Auto-retry with exponential backoff on 429 rate limit errors with seamless failover to Local Laya ONNX Runtime (`convaiinnovations/laya`).
 
-### 2. Universal Document & Evidence Redline Annotation Studio
+### 2. High-Capacity Folder Streaming (Up to 15 GB Archives)
+- **Objective**: Ingestion pipeline support for deep multi-gigabyte project directories containing nested CAD geometry and software packages.
+- **Scope**:
+  - Implement Web Worker-based chunked streaming unpacker to avoid main thread UI freezing on multi-gigabyte archives.
+  - Add client-side archive pre-flight hash verification and resume tokens.
+
+### 3. Universal Document & Evidence Redline Annotation Studio
 - **Objective**: Full lifecycle annotation persistence for insurance claims, forensic accident reports, and engineering drawings.
 - **Scope**:
   - Persist modified Filerobot canvas state (shapes, text overlays, measurements, highlight stamps) directly into localStorage and IndexedDB.
   - Add multi-page document pagination inside the markup modal (navigating between pages of multi-page PDFs such as `3_FIR_PoliceAccidentReport.pdf`).
   - Automatically bind annotated evidence figures directly into SOW markdown and S3 audit trail (`s3://bam-intake/pkg-2026-0147/annotated/`).
 
-### 3. ISATVON Skills Grid 3.2 Layout & Density Controls
+### 4. ISATVON Skills Grid 3.2 Layout & Density Controls
 - **Objective**: Enhance AG Grid 3.2 viewport responsiveness and high-density viewing.
 - **Scope**:
-  - Implement a three-state density switcher:
-    - **Compact**: 36px fixed row height with single-line truncation and tooltip previews.
-    - **Balanced**: 64px row height (default) showing 2-3 lines of text.
-    - **Expanded**: Dynamic `autoHeight` for thorough review.
+  - Implement a three-state density switcher (Compact: 36px, Balanced: 64px, Expanded: autoHeight).
   - Support batch multi-cell copy/paste from Excel/Google Sheets into ISATVON columns.
   - Add native `.xlsx` and `.csv` export with digital signature manifest.
 
-### 4. Stage 4 Automated Validation & BAM_db Temporal Handshake
+### 5. Stage 4 Automated Validation & BAM_db Temporal Handshake
 - **Objective**: Connect Stage 4.1–4.4 Temporal workers to live PostgreSQL `BAM_db` instances.
 - **Scope**:
   - Stream live Temporal heartbeat events over WebSocket instead of simulated polling.

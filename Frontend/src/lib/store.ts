@@ -11,7 +11,7 @@ export interface Toast { id: number; tone: 'info' | 'success' | 'error'; text: s
 
 export interface Ui {
   theme: 'dark' | 'light'
-  env: 'FDE' | 'Staging'
+  env: 'FDE' | 'Client' | 'Staging'
   settingsOpen: boolean
   settingsTab?: 'engines' | 'keys' | 'telemetry'
   toasts: Toast[]

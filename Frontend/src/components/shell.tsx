@@ -90,21 +90,21 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
           {offline ? `Backend unreachable` : `Synced`}
         </span>
 
-        {/* Glass mode switch: native radios (Staging = left half, FDE = right half) */}
-        <fieldset className="env-glass" data-env={env} aria-describedby="env-hint" title="View context, not a deploy">
+        {/* Glass mode switch: native radios (Client = left half, FDE = right half) */}
+        <fieldset className="env-glass" data-env={env} aria-describedby="env-hint" title="Switch between Client view and FDE Engineering mode">
           <legend className="sr-only">Environment mode</legend>
           <span className="eg-track" aria-hidden />
           <span className="eg-sphere" aria-hidden>
-            <span className="eg-ghost">{env === 'FDE' ? 'Staging' : 'FDE'}</span>
+            <span className="eg-ghost">{env === 'FDE' ? 'Client' : 'FDE'}</span>
             {env === 'FDE'
               ? <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3 7 13" /></svg>
               : <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 1.8 14.5 5 8 8.2 1.5 5z" /><path d="m3.2 7.6 4.8 2.4 4.8-2.4 1.7.85L8 11.6 1.5 8.45z" opacity=".85" /><path d="m3.2 10.6 4.8 2.4 4.8-2.4 1.7.85L8 14.6 1.5 11.45z" opacity=".7" /></svg>}
           </span>
-          <span className="eg-text" aria-hidden>{env}</span>
-          {(['Staging', 'FDE'] as const).map(e => (
-            <label key={e} className={`eg-opt eg-${e.toLowerCase()} ${env === e ? 'on' : ''}`}>
-              <input type="radio" name="env" value={e} checked={env === e} aria-label={e}
-                onChange={() => { setUi({ env: e }); toast(`Viewing ${e} context.`, 'info', undefined, 'env') }} />
+          <span className="eg-text" aria-hidden>{env === 'Staging' ? 'Client' : env}</span>
+          {(['Client', 'FDE'] as const).map(e => (
+            <label key={e} className={`eg-opt eg-${e.toLowerCase()} ${env === e || (e === 'Client' && env === 'Staging') ? 'on' : ''}`}>
+              <input type="radio" name="env" value={e} checked={env === e || (e === 'Client' && env === 'Staging')} aria-label={e}
+                onChange={() => { setUi({ env: e }); toast(`Viewing ${e} mode.`, 'info', undefined, 'env') }} />
             </label>
           ))}
         </fieldset>
