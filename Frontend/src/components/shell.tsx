@@ -23,7 +23,16 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
   const { user } = useAuth()
   const { workspace, project } = useWorkspace()
   const [showConnector, setShowConnector] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      const dismissed = localStorage.getItem('bam_intro_dismissed_v1')
+      const pref = localStorage.getItem('bam_show_launchpad_startup')
+      if (pref === 'false') return false
+      return !dismissed
+    } catch {
+      return false
+    }
+  })
 
   return (
     <header className="topbar">
@@ -44,6 +53,31 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
         </nav>
       </div>
       <div className="topbar-right">
+        {/* Workspace & History Launchpad Pill */}
+        <button
+          type="button"
+          className="badge sm topbar-ws-pill"
+          onClick={() => setShowOnboarding(true)}
+          title={`Active Workspace: ${workspace.name} · Active Project: ${project.code}. Click to open Workspace Launchpad & History.`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            fontSize: '11px',
+            fontWeight: '600',
+            padding: '2px 9px',
+            borderRadius: '6px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Icon name="folder" size={12} />
+          <span>Workspaces &amp; History</span>
+        </button>
+
         {/* Topbar Simulation Mode Pill */}
         <span className="badge sm topbar-sim-badge" style={{
           background: 'color-mix(in srgb, var(--warn) 15%, transparent)',
@@ -135,8 +169,8 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
           <button
             type="button"
             className="user-profile-chip"
-            onClick={() => setShowConnector(true)}
-            title={`Active: ${user.name} (${user.role}) via ${user.provider}. Click to manage Open Connector SSO sessions.`}
+            onClick={() => setShowOnboarding(true)}
+            title={`Active: ${user.name} (${user.role}) via ${user.provider}. Click to manage workspace & switch identities.`}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '3px 8px 3px 4px',
               borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--surface-2)',
@@ -159,8 +193,8 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
           <button
             type="button"
             className="btn xs"
-            onClick={() => setShowConnector(true)}
-            title="Sign in with Clerk, Google, or GitHub SSO"
+            onClick={() => setShowOnboarding(true)}
+            title="Sign in to BAM, configure tenant workspace, or choose 1-click identity"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               borderRadius: '20px', padding: '4px 10px',

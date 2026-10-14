@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { goScreen, usePath } from '../lib/route'
 import { Icon } from '../components/ui'
 import { Toasts } from '../components/shell'
@@ -147,6 +147,10 @@ function TrackerSubtaskRow({ stage, currentScreen, onClose }: { stage: TrackerIt
 }
 
 export function TrackerStrip() {
+  const [pinned, setPinned] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isManualExpanded, setIsManualExpanded] = useState(false)
+
   const openTask = useTrackerStore(t => t.openTask)
   const selected = useTrackerStore(t => t.selected)
   const storageError = useTrackerStore(t => t.storageError)
@@ -163,10 +167,14 @@ export function TrackerStrip() {
     }
   }, [currentStage, openTask])
 
+  // Is the staging rail currently revealed?
+  const isExpanded = pinned || isHovered || isManualExpanded || !!openTask
+
   // Opening a stage also opens its first built screen; closing it leaves you where you are.
   const toggle = (id: string) => {
     const opening = openTask !== id
     setTracker({ openTask: opening ? id : null, selected: null })
+    if (opening) setIsManualExpanded(true)
     if (opening && currentStage !== id) {
       const first = subtasksOf(id)[0]
       if (first) goScreen(first.id)
@@ -175,6 +183,7 @@ export function TrackerStrip() {
   const close = () => {
     const id = openTask
     setTracker({ openTask: null, selected: null })
+    if (!pinned) setIsManualExpanded(false)
     if (id) triggers.current[id]?.focus()
   }
   const onKey = (e: KeyboardEvent) => {
@@ -186,24 +195,79 @@ export function TrackerStrip() {
   }
 
   return (
-    <div className="tracker enterprise-tracker-root" onKeyDown={onKey}>
-      <div className="enterprise-tracker-bar">
-        <div className="enterprise-stepper-rail">
-          {TASKS.map((t, idx) => (
-            <div key={t.id} className="enterprise-step-wrapper">
-              {idx > 0 && <div className="enterprise-connector" />}
-              <TrackerTask
-                item={t}
-                open={activeStageId === t.id}
-                currentScreen={currentStage === t.id ? currentScreen : undefined}
-                onToggle={() => toggle(t.id)}
-                setRef={el => { triggers.current[t.id] = el }}
-              />
+    <div
+      className={`tracker enterprise-tracker-root ${isExpanded ? 'is-expanded' : 'is-collapsed'}`}
+      onKeyDown={onKey}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false)
+        if (!pinned && !openTask) {
+          setIsManualExpanded(false)
+        }
+      }}
+    >
+      {/* 1. Continuous Moving Gradient Laser Line */}
+      <div
+        className="tracker-gradient-line"
+        onClick={() => setIsManualExpanded(prev => !prev)}
+        title={isExpanded ? 'Click to collapse staging rail into gradient line' : 'Click or hover to expand workflow staging rail'}
+      >
+        <div className="tracker-moving-laser" />
+        {!isExpanded && (
+          <div className="tracker-collapsed-meta">
+            <div className="tracker-micro-badge">
+              <span className="tracker-pulse-dot" />
+              <span className="tracker-micro-title">Stage {currentStage}: {openStage?.shortLabel || 'Intake'}</span>
+              <span className="tracker-micro-screen">{currentScreen || '1.1'}</span>
             </div>
-          ))}
-        </div>
-        <Toasts />
+            <span className="tracker-expand-hint">Hover or click line to view staging</span>
+            <div className="tracker-collapsed-toasts">
+              <Toasts />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* 2. Full Staging Rail (revealed when expanded) */}
+      {isExpanded && (
+        <div className="enterprise-tracker-bar">
+          <div className="enterprise-stepper-rail">
+            {TASKS.map((t, idx) => (
+              <div key={t.id} className="enterprise-step-wrapper">
+                {idx > 0 && <div className="enterprise-connector" />}
+                <TrackerTask
+                  item={t}
+                  open={activeStageId === t.id}
+                  currentScreen={currentStage === t.id ? currentScreen : undefined}
+                  onToggle={() => toggle(t.id)}
+                  setRef={el => { triggers.current[t.id] = el }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="tracker-bar-right-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className={`btn btn-ghost sm tracker-pin-btn ${pinned ? 'is-pinned' : ''}`}
+              onClick={() => {
+                const next = !pinned
+                setPinned(next)
+                if (!next) {
+                  setIsManualExpanded(false)
+                  setIsHovered(false)
+                }
+              }}
+              title={pinned ? 'Staging rail pinned open. Click to auto-collapse into gradient line.' : 'Auto-collapsing. Click to pin staging rail open.'}
+              style={{ height: '26px', padding: '0 8px', fontSize: '11px', gap: '4px', color: pinned ? 'var(--accent)' : 'var(--muted)' }}
+            >
+              <Icon name={pinned ? 'lock' : 'chevron'} size={11} style={!pinned ? { transform: 'rotate(180deg)' } : undefined} />
+              <span>{pinned ? 'Pinned' : 'Collapse'}</span>
+            </button>
+            <Toasts />
+          </div>
+        </div>
+      )}
 
       {storageError && (
         <div className="tracker-error" role="alert">
@@ -212,9 +276,10 @@ export function TrackerStrip() {
         </div>
       )}
 
-      {openStage && (
+      {isExpanded && openStage && (
         <TrackerSubtaskRow stage={openStage} currentScreen={currentScreen} onClose={close} />
       )}
     </div>
   )
 }
+
