@@ -13,6 +13,7 @@ export interface Ui {
   theme: 'dark' | 'light'
   env: 'FDE' | 'Staging'
   settingsOpen: boolean
+  settingsTab?: 'engines' | 'keys' | 'telemetry'
   toasts: Toast[]
   passage?: string
   codeFocus?: { file: string; line?: number }
@@ -65,7 +66,7 @@ let state: Ui = {
 }
 const subs = new Set<() => void>()
 
-export const openSettings = () => setUi({ settingsOpen: true })
+export const openSettings = (tab?: 'engines' | 'keys' | 'telemetry') => setUi({ settingsOpen: true, ...(tab ? { settingsTab: tab } : {}) })
 export const closeSettings = () => setUi({ settingsOpen: false })
 export const openOpenRouterModal = () => setUi({ openRouterModalOpen: true })
 export const closeOpenRouterModal = () => setUi({ openRouterModalOpen: false })

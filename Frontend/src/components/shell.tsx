@@ -28,10 +28,10 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
   return (
     <header className="topbar">
       <div className="brand">
-        <div className="brand-logo-group" onClick={() => setShowOnboarding(true)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="brand-logo-group" onClick={() => setShowOnboarding(true)} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', flex: 'none', whiteSpace: 'nowrap' }}>
           <span className="logo" aria-hidden title="Click to open BAM Workspace Onboarding & Projects">B</span>
-          <span className="brand-title" style={{ fontWeight: '700', fontSize: '14.5px', color: 'var(--text)', letterSpacing: '-0.02em' }}>
-            BuLLM <span style={{ fontWeight: '500', color: 'var(--accent)', fontSize: '12.5px', background: 'var(--accent-soft)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--accent)' }}>/ {workspace.name}</span>
+          <span className="brand-title" style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)', letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+            BuLLM <span style={{ fontWeight: '500', color: 'var(--accent)', fontSize: '11.5px', background: 'var(--accent-soft)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--accent)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>/ {workspace.name}</span>
           </span>
         </div>
         {/* Interactive Workspace & Project Breadcrumbs */}
@@ -180,7 +180,7 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
         </button>
 
         {/* Settings Button */}
-        <button className="icon-btn sm" onClick={openSettings} aria-label="Settings & AI Decision Engines" title="Settings & AI Decision Engines">
+        <button className="icon-btn sm" onClick={() => openSettings()} aria-label="Settings & AI Decision Engines" title="Settings & AI Decision Engines">
           <Icon name="gear" size={13} />
         </button>
       </div>

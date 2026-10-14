@@ -5,9 +5,16 @@ import { fetchJevModels, selectJevModel, type JevModelInfo } from '../api/sowEva
 
 export function AppSettingsModal() {
   const open = useUi(s => s.settingsOpen)
+  const targetTab = useUi(s => s.settingsTab)
   const [activeTab, setActiveTab] = useState<'engines' | 'keys' | 'telemetry'>('engines')
   const [models, setModels] = useState<JevModelInfo[]>([])
-  const [activeModel, setActiveModel] = useState<string>('openrouter')
+  const [activeModel, setActiveModel] = useState<string>(() => {
+    try {
+      return localStorage.getItem('bam_active_model') || 'openrouter'
+    } catch {
+      return 'openrouter'
+    }
+  })
   const [apiKey, setApiKey] = useState<string>('')
   const [showKey, setShowKey] = useState<boolean>(false)
   const [savingKey, setSavingKey] = useState<boolean>(false)
@@ -15,6 +22,7 @@ export function AppSettingsModal() {
 
   useEffect(() => {
     if (!open) return
+    if (targetTab) setActiveTab(targetTab)
     const storedKey = localStorage.getItem('bam_openrouter_key') || ''
     setApiKey(storedKey)
 
@@ -22,14 +30,18 @@ export function AppSettingsModal() {
     fetchJevModels()
       .then(res => {
         if (res.models?.length) setModels(res.models)
-        if (res.activeModel) setActiveModel(res.activeModel)
+        if (res.activeModel) {
+          setActiveModel(res.activeModel)
+          localStorage.setItem('bam_active_model', res.activeModel)
+        }
       })
       .finally(() => setLoadingModels(false))
-  }, [open])
+  }, [open, targetTab])
 
   const handleSelectModel = async (modelId: string) => {
     setActiveModel(modelId)
     try {
+      localStorage.setItem('bam_active_model', modelId)
       await selectJevModel(modelId)
       toast(`Active evaluation engine: ${modelId}`, 'info')
     } catch {
@@ -85,6 +97,7 @@ export function AppSettingsModal() {
       open={open}
       title="System Settings & Engine Orchestration"
       onClose={closeSettings}
+      className="dialog wide settings-dialog"
       footer={
         <div className="row" style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
           <span className="muted xs">Changes apply across all stages (Intake, RAG, SOW Workbench).</span>

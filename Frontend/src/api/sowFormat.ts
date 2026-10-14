@@ -115,18 +115,25 @@ function cleanFdeGoal(goal?: string): string {
 }
 
 export function detectFileDomains(files: string[]) {
-  const cadFiles = files.filter(f => /\.(step|stp|cad|dwg|dxf|gerber|gbr|ipc|x_t|iges|igs)$/i.test(f) || /bracket|housing/i.test(f))
+  const claimsFiles = files.filter(f => /claim|policy|fir|police|accident|licen[cs]e|registration|vehicle|evidence|estimate|repair|surveyor|loss|damage|salvage|deductible/i.test(f))
+  const cadFiles = files.filter(f => /\.(step|stp|cad|dwg|dxf|gerber|gbr|ipc|x_t|iges|igs)$/i.test(f) || /(^|[-_])(bracket|housing)([-_.]|$)/i.test(f))
   const bomFiles = files.filter(f => /\.(xlsx|xls|csv)$/i.test(f) && (/bom|bill.*material|part|inventory|component/i.test(f) || !/master|rule|org/i.test(f)))
   const masterFiles = files.filter(f => /master|rule|org|organization|skills|tooling|filetype/i.test(f))
-  const softwareFiles = files.filter(f => /\.(zip|tar|gz|py|ts|js|jsx|tsx|json|sh|toml|yaml|yml)$/i.test(f) || /django|scanner|flow|app|sys|master|repo|api|service|code|productivity/i.test(f))
+  const softwareFiles = files.filter(f =>
+    (/\.(zip|tar|gz|tgz|py|ts|js|jsx|tsx|sh|bash|toml|yaml|yml|rs|go|java|c|cpp|h)$/i.test(f) ||
+    /(^|[-_])(django|fastapi|backend|frontend|service|scanner|autoscanner|microservice|repo|pipeline)([-_.]|$)/i.test(f)) &&
+    !claimsFiles.includes(f)
+  )
   const telemetryFiles = files.filter(f => /space-track|leo|orbit|telemetry|tle|ephemeris|sat/i.test(f))
   const specFiles = files.filter(f => /\.(pdf|docx|doc)$/i.test(f))
   const licenseFiles = files.filter(f => /license/i.test(f))
 
-  const isSoftwareDomain = softwareFiles.length > 0 && cadFiles.length === 0
-  const isCadManufacturingDomain = cadFiles.length > 0 || (bomFiles.length > 0 && softwareFiles.length === 0) || (files.some(f => /rfq/i.test(f)) && softwareFiles.length === 0)
+  const isClaimsDomain = claimsFiles.length > 0
+  const isCadManufacturingDomain = !isClaimsDomain && (cadFiles.length > 0 || (bomFiles.length > 0 && softwareFiles.length === 0) || files.some(f => /rfq|machining|cnc|sheetmetal/i.test(f)))
+  const isSoftwareDomain = !isClaimsDomain && !isCadManufacturingDomain && softwareFiles.length > 0
 
   return {
+    claimsFiles,
     cadFiles,
     bomFiles,
     masterFiles,
@@ -134,8 +141,9 @@ export function detectFileDomains(files: string[]) {
     telemetryFiles,
     specFiles,
     licenseFiles,
-    isSoftwareDomain,
+    isClaimsDomain,
     isCadManufacturingDomain,
+    isSoftwareDomain,
   }
 }
 
@@ -159,15 +167,83 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
 
   const reqs: RequirementFields[] = []
 
-  if (domain.isSoftwareDomain) {
+  if (domain.isClaimsDomain) {
+    // ---- INSURANCE CLAIMS & FORENSIC INTELLIGENCE DOMAIN ----
+    const claimDoc = files.find(f => /claim/i.test(f)) || domain.claimsFiles[0] || '1_ClaimIntimation.pdf'
+    const policyDoc = files.find(f => /policy/i.test(f)) || '2_PolicySchedule.pdf'
+    const firDoc = files.find(f => /fir|police/i.test(f)) || '3_FIR_PoliceAccidentReport.pdf'
+    const dlDoc = files.find(f => /licen[cs]e/i.test(f)) || '4_DrivingLicence.pdf'
+    const rcDoc = files.find(f => /registration|rc|vehicle/i.test(f)) || '5_VehicleRegistrationCertificate.pdf'
+    const evidencePhotos = files.filter(f => /evidence|photo|image|accident.*evidence/i.test(f))
+    const photoRef = evidencePhotos.length ? evidencePhotos.join(', ') : '6_AccidentEvidence.pdf'
+    const estimateFiles = files.filter(f => /estimate|repair/i.test(f))
+    const estimateRef = estimateFiles.length ? estimateFiles.join(', ') : '7_RepairEstimate.pdf, SUPPLEMENTAL_RepairEstimate.pdf'
+
+    reqs.push(
+      {
+        instructions: `Watch incoming insurance claim packet intake stream. Enforce dual-engine threat perimeter (BuLL*Sav ClamAV static signatures paired with Repel behavioral payload repulsion & prompt defense). Quarantine, verify, and register all ${files.length} claim artifacts into tenant encrypted enclave.${rawGoal ? ` FDE Objective: "${rawGoal}".` : ''}`,
+        sourceData: `s3://bam-intake/claims-2026-0147/ (${files.join(', ')})`,
+        automation: 'UNSTRUCTURED_TO_SOW_LLM',
+        techStack: 'FastMCP, ClamAV, Repel, PostgreSQL',
+        variables: 'max_batch: 25; air_gapped: true; dual_scan: unanimous; chunk_size: 10MB',
+        outcome: 'ClaimPackage JSON: claim_id, verified_docs[], quarantined_threats[], sha256_digests[]',
+        notifications: 'Post to #claims-intake on quarantine release; notify ops on payload repulsion',
+      },
+      {
+        instructions: `Extract and reconcile motor policy schedule (${policyDoc}) and claim intimation (${claimDoc}). Parse vehicle identification number (VIN), insured declared value (IDV), policy inception/expiry dates, deductible thresholds, and zero-depreciation endorsements against PostgreSQL claims database.`,
+        sourceData: `s3://bam-intake/claims-2026-0147/${policyDoc}#schedule; ${claimDoc}`,
+        automation: 'EXCEL_TO_JSON_AST',
+        techStack: 'DuckDB, FastMCP, Pydantic, PostgreSQL',
+        variables: 'endorsement_check: zero_depreciation; deductible_standard: 1000; date_format: ISO-8601; target_db: postgresql',
+        outcome: 'PolicyCoverageRecord JSON: policy_id, vin, idv, coverage_active: true, deductible_applied',
+        notifications: 'Webhook on policy coverage verification; alert claims lead on policy lapse',
+      },
+      {
+        instructions: `Decompress and parse AST structural entities from Police FIR and driver credentials (${firDoc}, ${dlDoc}, ${rcDoc}). Extract accident coordinates, FIR crime sections (IPC 279/338), driver license validity class (MCWG/LMV), and vehicle engine/chassis cross-match against state transport registry.`,
+        sourceData: `s3://bam-intake/claims-2026-0147/${firDoc}#sec=fir; ${dlDoc}; ${rcDoc}`,
+        automation: 'DYNAMIC_CONTEXT_VERIFIER',
+        techStack: 'DuckDB, FastMCP, Pydantic, PostgreSQL',
+        variables: 'fir_validation: mandatory; licence_class: LMV; chassis_match: strict; tolerance_days: 0',
+        outcome: 'ForensicLiabilityManifest JSON: incident_timestamp, ipc_sections[], dl_valid: true, rc_verified: true',
+        notifications: 'Emit alert on license expiry; flag criminal hit-and-run citations',
+      },
+      {
+        instructions: `Reconcile itemized damage repair estimates (${estimateRef}) against photographic damage evidence (${photoRef}). Itemize parts replacement (bumper, radiator, headlights, fender), evaluate labor rate benchmarks ($45/hr metalwork, $65/hr paint booth), and apply salvage depreciation schedules.`,
+        sourceData: `s3://bam-intake/claims-2026-0147/${estimateRef}; ${photoRef}`,
+        automation: 'JSON_TO_PYTHON_JINJA2',
+        techStack: 'FastMCP, DuckDB, Jinja2, PostgreSQL',
+        variables: 'labor_rate_hourly: 55.00; paint_booth_fixed: 180.00; metal_depreciation_pct: 10; plastic_depreciation_pct: 50',
+        outcome: 'DamageAppraisalReport JSON: claimed_amount, approved_parts[], approved_labor, net_claim_payable',
+        notifications: 'Trigger surveyor escalation if repair cost variance > 12%',
+      },
+      {
+        instructions: `Execute Cognee GraphRAG multi-modal fraud detection screening across ingested files (${files.slice(0, 4).join(', ')}). Search duplicate image hash embeddings, inspect metadata EXIF timestamps on accident evidence, and cross-reference historical fraudulent claim rings.`,
+        sourceData: `s3://bam-intake/claims-2026-0147/ (${files.join(', ')})`,
+        automation: 'DYNAMIC_CONTEXT_VERIFIER',
+        techStack: 'Cognee, FastMCP, LanceDB, DuckDB',
+        variables: 'image_hash_threshold: 0.95; exif_tolerance_hours: 48; fraud_risk_score_max: 0.25',
+        outcome: 'FraudScreeningResult JSON: fraud_risk_score: 0.08, duplicate_hits: 0, anomaly_flags: []',
+        notifications: 'Alert Special Investigation Unit (SIU) if fraud risk exceeds 0.25',
+      },
+      {
+        instructions: 'Execute bounded self-correcting verification cycle per ISATVON 1.4 Loopy framework (max_iterations: 3, budget_limit: 5000ms). Decouple automated assessment from claims adjudicator check tool. Require cryptographic FDE sign-off and claims lead approval before routing settlement voucher to payment gateway.',
+        sourceData: `s3://bam-intake/claims-2026-0147/ (${files.join(', ')})`,
+        automation: 'HITL_APPROVAL',
+        techStack: 'FastMCP, BuLLM DMR, Apache Superset, PostgreSQL',
+        variables: 'max_iterations: 3; budget_limit_ms: 5000; approver_role: claims_lead; gate_policy: unanimous_pass',
+        outcome: 'ClaimsSettlementApproval JSON: claim_id, adjudicator, audit_trail[], payout_voucher_hash',
+        notifications: 'HITL sign-off alert to claims manager; publish payout authorization event',
+      }
+    )
+  } else if (domain.isSoftwareDomain) {
     // ---- SOFTWARE / MULTI-MODULE MICROSERVICES DOMAIN ----
     const djangoFile = files.find(f => /django/i.test(f)) || domain.softwareFiles[0] || 'app_service.zip'
-    const scannerFile = files.find(f => /scanner/i.test(f)) || '1AutoScanner_Pro_V3.zip'
-    const productivityFiles = files.filter(f => /flow|productivity|master/i.test(f))
-    const prodRef = productivityFiles.length ? productivityFiles.join('; ') : 'FocusFlow.zip; ProductivityMaster_GPT5_ADVANCED_RUNREADY.zip'
-    const telemetryFile = domain.telemetryFiles[0] || 'space-track-leo.txt'
-    const versionFile = files.find(f => /version/i.test(f)) || 'app_versions.zip'
-    const licenseRef = domain.licenseFiles.length ? domain.licenseFiles.join(', ') : 'LICENSE.txt, LICENSE-MIT.txt'
+    const scannerFile = files.find(f => /scanner/i.test(f)) || files.find(f => /\.zip$/i.test(f)) || 'code_scanner.zip'
+    const productivityFiles = files.filter(f => /flow|productivity|master|orchestrat/i.test(f))
+    const prodRef = productivityFiles.length ? productivityFiles.join('; ') : domain.softwareFiles.slice(0, 2).join('; ') || 'workflow_orchestrator.py'
+    const telemetryFile = domain.telemetryFiles[0]
+    const versionFile = files.find(f => /version/i.test(f))
+    const licenseRef = domain.licenseFiles.length ? domain.licenseFiles.join(', ') : ''
 
     reqs.push(
       {
@@ -180,12 +256,12 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
         notifications: 'Post to #intake-alerts on quarantine release; notify ops on payload repulsion',
       },
       {
-        instructions: `Decompress and parse AST repository structure for Django Application Service (${djangoFile}). Extract URL route mappings, database models, REST API endpoints, and recommendation scoring algorithms. Validate environment dependencies and schema migrations against PostgreSQL/DuckDB.`,
+        instructions: `Decompress and parse AST repository structure for Application Service (${djangoFile}). Extract URL route mappings, database models, REST API endpoints, and recommendation scoring algorithms. Validate environment dependencies and schema migrations against PostgreSQL/DuckDB.`,
         sourceData: `s3://bam-intake/pkg-2026-0147/${djangoFile}`,
         automation: 'EXCEL_TO_JSON_AST',
         techStack: 'DuckDB, FastMCP, Pydantic, PostgreSQL',
-        variables: 'framework: django; extract_models: true; parse_endpoints: true; target_db: postgresql',
-        outcome: 'DjangoServiceManifest JSON: routes[], models[], matching_engine_spec, dependency_tree',
+        variables: 'framework: web_service; extract_models: true; parse_endpoints: true; target_db: postgresql',
+        outcome: 'ServiceManifest JSON: routes[], models[], matching_engine_spec, dependency_tree',
         notifications: 'Webhook on schema extraction; alert lead on deprecated library versions',
       },
       {
@@ -207,13 +283,15 @@ export function generateDynamicRequirements(ctx: DynamicSowContext = {}): Requir
         notifications: 'Push WebSocket updates to client cockpit; trigger state audit log',
       },
       {
-        instructions: `Parse Low Earth Orbit (LEO) orbital ephemeris (${telemetryFile}) and validate multi-module semantic versioning (${versionFile}). Ingest TLE two-line element sets, verify timestamp monotonicity, and cross-reference open-source license compliance (${licenseRef}) across all integrated subsystems.`,
-        sourceData: `s3://bam-intake/pkg-2026-0147/${telemetryFile}; ${versionFile}; ${licenseRef}`,
+        instructions: telemetryFile
+          ? `Parse Low Earth Orbit (LEO) orbital ephemeris (${telemetryFile})${versionFile ? ` and validate semantic versioning (${versionFile})` : ''}. Ingest TLE two-line element sets, verify timestamp monotonicity, and cross-reference open-source license compliance${licenseRef ? ` (${licenseRef})` : ''} across all integrated subsystems.`
+          : `Perform dependency auditing and static code quality verification across codebase (${files.slice(0, 3).join(', ')}). Cross-reference open-source license compliance${licenseRef ? ` (${licenseRef})` : ''} and security CVE advisories across all integrated packages.`,
+        sourceData: `s3://bam-intake/pkg-2026-0147/ (${(telemetryFile ? [telemetryFile, versionFile, licenseRef] : files.slice(0, 3)).filter(Boolean).join('; ')})`,
         automation: 'DYNAMIC_CONTEXT_VERIFIER',
         techStack: 'DuckDB, FastMCP, Pandas, PostgreSQL',
-        variables: 'catalog_mode: LEO; epoch_tolerance_sec: 3600; tle_validation: strict; license_whitelist: MIT,Apache-2.0',
-        outcome: 'OrbitalTelemetryDataset JSON: satellite_count, tle_records[], license_compliance_verified: true',
-        notifications: 'Alert flight dynamics on ephemeris variance; sync version tags to registry',
+        variables: telemetryFile ? 'catalog_mode: LEO; epoch_tolerance_sec: 3600; tle_validation: strict' : 'cve_threshold: high; license_whitelist: MIT,Apache-2.0,BSD-3-Clause',
+        outcome: 'AuditDataset JSON: package_count, vulnerability_count: 0, license_compliance_verified: true',
+        notifications: 'Alert lead on dependency CVE variance; sync version tags to registry',
       },
       {
         instructions: 'Execute bounded self-correcting verification cycle per ISATVON 1.4 Loopy framework (max_iterations: 3, budget_limit: 5000ms). Decouple Action Tool from independent Fixed Check Tool. Require cryptographic sign-off and FDE human-in-the-loop approval before promoting verified package bundle to production sandbox.',
@@ -365,21 +443,32 @@ export function produceDynamicSowHtml(ctx: DynamicSowContext = {}): string {
   const reqs = generateDynamicRequirements(ctx)
   const files = ctx.releasedFiles ?? []
   const domain = detectFileDomains(files)
-  const defaultTitle = domain.isSoftwareDomain
-    ? 'Distributed Microservices & Automated Processing Pipeline'
+  const defaultTitle = domain.isClaimsDomain
+    ? 'Motor Insurance Claims & Forensic Incident Processing Pipeline'
     : domain.isCadManufacturingDomain
       ? 'RFQ Engineering & Contract Manufacturing Automation'
-      : 'Enterprise Document Intelligence & Automation'
+      : domain.isSoftwareDomain
+        ? 'Distributed Microservices & Automated Processing Pipeline'
+        : 'Enterprise Document Intelligence & Automation'
 
   return renderSowHtml(reqs, ctx.notes, ctx.workflowTitle || defaultTitle)
 }
+
+const CLAIMS_CLUSTERS: [agent: string, name: string][] = [
+  ['Intake & Security Agent', 'Threat perimeter & claims intake'],
+  ['Policy Verification Agent', 'Policy coverage & deductible audit'],
+  ['Forensic Extraction Agent', 'Police FIR & driver credentials AST'],
+  ['Damage & Repair Agent', 'Estimate itemization & salvage audit'],
+  ['Fraud Detection Agent', 'Anti-fraud heuristic screening'],
+  ['Settlement & Governance Agent', 'ISATVON loop & HITL claims sign-off'],
+]
 
 const SOFTWARE_CLUSTERS: [agent: string, name: string][] = [
   ['Security & Intake Agent', 'Threat perimeter & package intake'],
   ['Backend Architecture Agent', 'Application AST & service schema'],
   ['Code Analysis Agent', 'Automated scanner & vulnerability engine'],
   ['Workflow Agent', 'Task graph & prompt orchestration'],
-  ['Data & Compliance Agent', 'Orbital telemetry & license audit'],
+  ['Data & Compliance Agent', 'Dependency CVE & license audit'],
   ['Release & Deployment Agent', 'ISATVON loop & HITL release sign-off'],
 ]
 
@@ -404,7 +493,10 @@ const DOC_CLUSTERS: [agent: string, name: string][] = [
 export function clusterRequirement(n: number, fields: RequirementFields): { agent: string; name: string } {
   const text = (fields.instructions + ' ' + fields.automation + ' ' + fields.sourceData).toLowerCase()
 
-  if (/django|scanner|focus|flow|productivity|telemetry|orbit|space-track|autoscanner|tree-sitter/i.test(text)) {
+  if (/claim|policy|fir|police|accident|licen[cs]e|registration|damage|repair|surveyor|salvage|settlement|deductible/i.test(text)) {
+    const known = CLAIMS_CLUSTERS[n - 1]
+    if (known) return { agent: known[0], name: known[1] }
+  } else if (/django|scanner|focus|flow|productivity|telemetry|orbit|space-track|autoscanner|tree-sitter/i.test(text)) {
     const known = SOFTWARE_CLUSTERS[n - 1]
     if (known) return { agent: known[0], name: known[1] }
   } else if (/cad|step|geometry|toleran|bom|cert|smt|scrap|17-4|housing|bracket|rfq/i.test(text)) {

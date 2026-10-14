@@ -271,9 +271,12 @@ export function createMockApi({ speed = 1 } = {}): BamApi {
     } catch {}
 
     // Determine client name and workflow domain
-    let clientName = 'Enterprise Software Systems'
+    let clientName = 'Enterprise Systems & Intelligent Automation'
+    const hasClaims = releasedFiles.some(f => /claim|policy|fir|police|accident|licen[cs]e|vehicle|estimate|surveyor/i.test(f))
     const hasCad = releasedFiles.some(f => /\.(step|stp|cad)$/i.test(f) || /bracket|housing/i.test(f))
-    if (hasCad) {
+    if (hasClaims) {
+      clientName = 'Allied Global Underwriters & Forensic Claims'
+    } else if (hasCad) {
       clientName = 'Meridian Aerospace & Defense'
     } else {
       try {

@@ -13,11 +13,20 @@ export function prerequisite(snap: Snapshot, rag: Pick<RagState, 'runId' | 'step
   const sow = snap.sow
   const genFailed = snap.sowGeneration.find(s => s.status === 'failed')
   const generating = snap.sowGeneration.some(s => s.status === 'running' || s.status === 'queued')
+  const ragFailed = rag.steps.find(s => s.status === 'failed')
+  if (ragFailed) return { reason: `The RAG pipeline failed at "${ragFailed.label}", so no verified SOW can be approved.`, label: 'Open 2.1 to retry', target: '2.1' }
+
+  const ragRunning = rag.runId && !rag.steps.every(s => s.status === 'done')
+  if (ragRunning && (!sow || (sow.contextRunId && sow.contextRunId !== rag.runId))) {
+    return {
+      reason: 'The RAG context pipeline is still running. SOW synthesis begins automatically once Stage 2 finishes.',
+      label: 'Open 2.1 context pipeline', target: '2.1',
+    }
+  }
+
   if (!sow) {
     if (genFailed) return { reason: `SOW generation failed at "${genFailed.label}": ${genFailed.error ?? 'no reason reported'}`, label: 'Open 3.1 to retry', target: '3.1' }
     if (generating) return { reason: 'The SOW is being generated from the RAG context. It needs review and approval in 3.1 when it is ready.', label: 'Open 3.1', target: '3.1' }
-    const ragFailed = rag.steps.find(s => s.status === 'failed')
-    if (ragFailed) return { reason: `The RAG pipeline failed at "${ragFailed.label}", so no SOW has been generated yet.`, label: 'Open 2.1 to retry', target: '2.1' }
     return {
       reason: rag.runId ? 'The RAG context is still being built. The SOW is generated automatically when it is ready.' : 'Documents are stored but the RAG context has not been built yet, so no SOW exists.',
       label: 'Open 2.1 context pipeline', target: '2.1',

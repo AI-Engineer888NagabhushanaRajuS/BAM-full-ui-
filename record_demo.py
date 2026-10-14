@@ -54,10 +54,10 @@ def record_full_interactive_demo():
         time.sleep(2.0)
 
         # 1.1 FDE Directives: Preset selection + typing
-        fde_card = page.locator(".fde-goals-card")
+        fde_card = page.locator(".intake-command-bar, .fde-goals-card")
         if fde_card.count() > 0:
             print("[SCENE 1.1] Demonstrating FDE Goals & Pre-Ingestion Directives...")
-            fde_card.scroll_into_view_if_needed()
+            fde_card.first.scroll_into_view_if_needed()
             time.sleep(1.0)
 
             # Click a quick directive chip
@@ -68,12 +68,12 @@ def record_full_interactive_demo():
                 time.sleep(1.2)
 
             # Type additional ultra-context into textarea
-            textarea = page.locator(".fde-goals-textarea")
+            textarea = page.locator(".intake-command-textarea, .fde-goals-textarea, #fde-obj-input")
             if textarea.count() > 0:
                 print("  -> Appending defense-grade compliance directives...")
-                textarea.click()
-                textarea.press("End")
-                textarea.type(" Enforce MIL-A-8625 Type II clear anodize, 17-4PH certs and ISATVON 1.4 loop bounds.")
+                textarea.first.click()
+                textarea.first.press("End")
+                textarea.first.type(" Enforce MIL-A-8625 Type II clear anodize, 17-4PH certs and ISATVON 1.4 loop bounds.")
                 time.sleep(1.2)
 
             # Click Windows Voice Dictate button (shows pulsing recording state)
@@ -85,45 +85,22 @@ def record_full_interactive_demo():
                 voice_btn.first.click()
                 time.sleep(0.8)
 
-        # 1.2 Dual-Engine Threat Defense Hero
-        hero = page.locator(".intake-hero")
-        if hero.count() > 0:
-            hero.scroll_into_view_if_needed()
-            hero.hover()
-            time.sleep(1.2)
+        # 1.2 Dual-Engine Threat Defense Hero / Pipeline
+        av_status = page.locator("#av-status")
+        if av_status.count() > 0:
+            print("[SCENE 1.2] Prominently inspecting eye-level BuLL*Sav & Repel Security Scanning Pipeline...")
+            av_status.scroll_into_view_if_needed()
+            av_status.hover()
+            time.sleep(1.0)
 
-        # Hover ClamAV and Repel engine telemetry cards
-        engine_cards = page.locator(".hero-engine-card")
-        if engine_cards.count() >= 2:
-            print("[SCENE 1.2] Inspecting ClamAV Core & Repel Shield telemetry cards...")
-            engine_cards.first.hover()
-            time.sleep(0.8)
-            engine_cards.nth(1).hover()
-            time.sleep(0.8)
-
-        # 1.3 Load mockup batch of discovery files
-        mockup_btn = page.locator("button:has-text('Load mockup batch')")
+        # 1.3 Load mockup batch of discovery files (via Central Command Bar or toolbar)
+        mockup_btn = page.locator("button:has-text('Load Industrial RFQ Batch'), button:has-text('Load mockup batch')")
         if mockup_btn.count() > 0 and mockup_btn.first.is_visible():
-            print("[SCENE 1.3] Clicking 'Load mockup batch' to stage discovery documents...")
+            print("[SCENE 1.3] Clicking 'Load Industrial RFQ Batch (21 Docs)' to stage discovery documents...")
             mockup_btn.first.click()
-            time.sleep(1.5)
+            time.sleep(2.0)
 
-        # 1.4 Trigger Sequential 6-Node AV Defense Flow Animation
-        animate_btn = page.locator("button:has-text('Animate Defense Flow')")
-        if animate_btn.count() > 0 and animate_btn.first.is_visible():
-            print("[SCENE 1.4] Triggering Sequential 6-Node Defense Flow (Flow 1/6 -> 6/6)...")
-            animate_btn.first.click()
-            # Observe live sequential step progression: Upload -> Quarantine -> ClamAV -> Repel -> Twin Verdict -> Released
-            av_status = page.locator("#av-status")
-            if av_status.count() > 0:
-                av_status.scroll_into_view_if_needed()
-            time.sleep(6.0)
-        else:
-            print("[SCENE 1.4b] Observing live dual-engine scan progression...")
-            time.sleep(4.0)
-
-        # Check if pre-flight modal auto-popped up
-        time.sleep(1.5)
+        # Check if pre-flight modal auto-popped up on scan completion
         preflight_dialog = page.locator(".preflight-fullscreen-dialog")
         if preflight_dialog.count() > 0 and preflight_dialog.first.is_visible():
             print("[AUTO-POPUP VERIFIED] Pre-Flight Verification Cockpit auto-popped up on scan completion!")
@@ -132,6 +109,25 @@ def record_full_interactive_demo():
             if close_btn.count() > 0:
                 close_btn.first.click()
                 time.sleep(1.0)
+
+        # 1.4 Trigger Sequential 6-Node AV Defense Flow Animation
+        animate_btn = page.locator("button:has-text('Simulate Pipeline Flow'), button:has-text('Animate Defense Flow')")
+        if animate_btn.count() > 0 and animate_btn.first.is_visible():
+            print("[SCENE 1.4] Triggering Sequential 6-Node Defense Flow (Flow 1/6 -> 6/6)...")
+            animate_btn.first.click()
+            # Observe live sequential step progression: Upload -> Quarantine -> ClamAV -> Repel -> AST -> Released
+            if av_status.count() > 0:
+                av_status.scroll_into_view_if_needed()
+            time.sleep(2.0)
+            # Dismiss popup if re-opened
+            if preflight_dialog.count() > 0 and preflight_dialog.first.is_visible():
+                close_btn = page.locator(".preflight-fullscreen-dialog button:has-text('Close Gate Cockpit')")
+                if close_btn.count() > 0:
+                    close_btn.first.click()
+                    time.sleep(1.0)
+        else:
+            print("[SCENE 1.4b] Observing live dual-engine scan progression...")
+            time.sleep(1.5)
 
         # 1.5 Inspect verified file batch in files table
         print("[SCENE 1.5] Inspecting verified file batch with Repel evasion metrics...")

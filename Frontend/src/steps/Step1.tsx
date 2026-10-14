@@ -44,8 +44,8 @@ function Toolbar({ editor, onOpenImageEditor }: { editor: Editor; onOpenImageEdi
       <button
         type="button"
         className="tb tb-image-markup"
-        aria-label="CAD / Drawing Markup (Filerobot)"
-        title="Open Filerobot Image Editor to annotate CAD blueprints, cross-sections, and insert redline markup into SOW"
+        aria-label="Annotate Evidence & Documents (Filerobot)"
+        title="Open Universal Filerobot Studio to annotate insurance claim evidence, police FIRs, CAD blueprints, or photos and insert figure into SOW"
         disabled={!st.editable}
         onClick={onOpenImageEditor}
         style={{
@@ -57,8 +57,8 @@ function Toolbar({ editor, onOpenImageEditor }: { editor: Editor; onOpenImageEdi
           padding: '0 8px',
         }}
       >
-        <span>📐</span>
-        <span>Redline CAD / Drawing</span>
+        <span>📷</span>
+        <span>Annotate Evidence / Drawing</span>
       </button>
     </div>
   )
@@ -66,7 +66,7 @@ function Toolbar({ editor, onOpenImageEditor }: { editor: Editor; onOpenImageEdi
 
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
-function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info: StepProps['info'] }) {
+function SowEditor({ sow, editable, info, uploadedFiles }: { sow: Sow; editable: boolean; info: StepProps['info']; uploadedFiles?: string[] }) {
   const qc = useQueryClient()
   const base = useRef(sow.version)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -87,7 +87,7 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
 
   const handleInsertAnnotatedImage = (dataUri: string, captionTitle?: string) => {
     if (!editor) return
-    const title = captionTitle || 'Annotated CAD Drawing'
+    const title = captionTitle || 'Annotated Document Evidence'
     editor.chain().focus().setImage({ src: dataUri, alt: title, title }).run()
   }
 
@@ -116,7 +116,7 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
       const target = e.target as HTMLElement
       if (target.tagName?.toLowerCase() === 'img') {
         const src = target.getAttribute('src')
-        const alt = target.getAttribute('alt') || 'CAD Markup'
+        const alt = target.getAttribute('alt') || 'Evidence Markup'
         if (src) {
           setEditingImageSrc(src)
           setEditingImageCaption(alt)
@@ -206,17 +206,6 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
           {!approved && !decideReason && <span className="muted sm">Approving v{sow.version} unlocks 3.2 and extracts skills from this exact version.</span>}
         </div>
         <div className="row">
-          {info.editable && sow.status !== 'regenerating' && !approved && (
-            <button
-              className="btn btn-secondary"
-              disabled={!!busy}
-              onClick={() => run('Regenerate SOW', () => api.requestSowChanges(sow.version, 'Regenerate tailored SOW matching ingested files and modules'), { success: 'SOW regenerated from ingested source files', step: 1 })}
-              title="Re-synthesize SOW requirements dynamically from currently ingested source documents"
-            >
-              <Icon name="refresh" />
-              Regenerate from Ingested Files
-            </button>
-          )}
           {approved && info.editable && <button className="btn btn-ghost" disabled={!!busy}
             onClick={() => run('Close SOW review', () => api.closeReopen(1), { step: 1 }).then(() => goStep(2))}>Keep approval and close</button>}
           <GateButton action="approve" reason={approveReason} busy={busy === 'Approve'} successKey={sow.approval?.version}
@@ -244,6 +233,7 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
         onInsertImage={handleInsertAnnotatedImage}
         initialImage={editingImageSrc}
         initialCaption={editingImageCaption}
+        uploadedFiles={uploadedFiles}
       />
     </Pane>
   )
@@ -253,7 +243,8 @@ export function Center({ snap, info }: StepProps) {
   const { busy, run } = useAction()
   const ragRunning = useRag(isRunning)
   const sow = snap.sow
-  if (sow) return <SowEditor sow={sow} editable={info.editable && sow.status !== 'regenerating'} info={info} />
+  const uploadedFiles = snap.uploads.map(u => u.name)
+  if (sow) return <SowEditor sow={sow} editable={info.editable && sow.status !== 'regenerating'} info={info} uploadedFiles={uploadedFiles} />
   const failed = snap.sowGeneration.find(s => s.status === 'failed')
   const running = snap.sowGeneration.some(s => s.status === 'running' || s.status === 'queued')
   return (
@@ -351,27 +342,27 @@ function SowAccuracy({ sow }: { sow: Sow }) {
 // ---- 3.1 Three-Pane Architecture (Workflows Left, Draft Middle, Scope/Evidence Right) ----
 export function WorkflowPane({ snap }: StepProps) {
   const sow = snap.sow
-  const { busy, run } = useAction()
   const runId = useRag(s => s.runId)
   const preflight = getPreflightSufficiency()
+  const modelStatus = getModelGateStatus()
 
   return (
-    <Pane id="left-title" kicker="Workflows & Execution" title="SOW generation">
-      {/* Pre-Flight Gate Warning Card if not unlocked */}
-      {!preflight.isUnlocked && (
+    <Pane id="left-title" kicker="3.1 · Contract Architecture" title="ISATVON Contract Specs">
+      {/* Pre-Flight Gate Status if locked */}
+      {!preflight.isUnlocked ? (
         <div style={{
-          padding: '10px 12px', borderRadius: '8px', marginBottom: '12px',
+          padding: '10px 12px', borderRadius: '8px', marginBottom: '10px',
           background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
           border: '1px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '6px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ color: 'var(--accent)' }}><Icon name="alert" size={13} /></span>
             <strong style={{ fontSize: '12px', color: 'var(--text)' }}>
-              Pre-Flight Gate Locked ({preflight.passRate}% / 80% req)
+              Pre-Flight Gate ({preflight.passRate}% / 80% req)
             </strong>
           </div>
           <p className="xs muted" style={{ margin: 0, lineHeight: 1.3 }}>
-            Master Context Sufficiency must reach 80% to certify SOW generation against the 5 Masters.
+            Context sufficiency must reach 80% to certify SOW generation against master specifications.
           </p>
           <button
             type="button"
@@ -383,42 +374,70 @@ export function WorkflowPane({ snap }: StepProps) {
             <span>Open Pre-Flight Cockpit</span>
           </button>
         </div>
-      )}
-
-      <Section title="Active Pipeline">
-        <p className="muted sm">Workflows allowed for this project. Execution progress and pipeline status report here in real time.</p>
-        {snap.sowGeneration.length === 0
-          ? <Empty icon="clock" title="No SOW generation yet">Runs when the RAG pipeline (stage 2) finishes. Each stage reports its status, time and run ID here.</Empty>
-          : <StageList stages={snap.sowGeneration} />}
-      </Section>
-      <Section title="Workflow Actions">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary sm"
-            onClick={openPreflight}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Icon name={preflight.isUnlocked ? 'check' : 'shield'} size={12} />
-            <span>Pre-Flight Cockpit ({preflight.passRate}% {preflight.isUnlocked ? 'PASS' : 'GATE'})</span>
-          </button>
-          <button
-            className="btn btn-secondary sm"
-            disabled={busy === 'Regenerate SOW'}
-            onClick={() => void run('Regenerate SOW', () => api.startSowGeneration(ragPipeline.getState().runId), { success: 'SOW regenerated from context pipeline.', step: 1 })}
-          >
-            <Icon name="refresh" />Regenerate SOW from RAG
-          </button>
-          <button className="btn btn-ghost sm" onClick={() => goScreen('2.1')}>
-            <Icon name="link" size={12} />Context Graph Explorer (2.1)
+      ) : (
+        <div style={{
+          padding: '8px 12px', borderRadius: '8px', marginBottom: '10px',
+          background: 'color-mix(in srgb, var(--st-done) 10%, transparent)',
+          border: '1px solid var(--st-done)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: 'var(--st-done)' }}><Icon name="check" size={13} /></span>
+            <strong style={{ fontSize: '12px', color: 'var(--text)' }}>Pre-Flight Certified ({preflight.passRate}%)</strong>
+          </div>
+          <button type="button" className="btn btn-ghost xs" onClick={openPreflight} style={{ height: '22px', fontSize: '10.5px' }}>
+            Cockpit
           </button>
         </div>
+      )}
+
+      <Section title="ISATVON 1.4 Architecture Specification">
+        <p className="muted xs" style={{ marginBottom: '8px' }}>
+          Every requirement in this contract is structured with strict ISATVON taxonomy before skill extraction:
+        </p>
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>I · Instructions:</strong> Algorithmic logic &amp; business directives
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>S · Source Data:</strong> Strict S3/DB object URI with line anchors
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>A · Automation:</strong> FastMCP agent pattern (LLM / AST / HITL)
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>T · Tech Stack:</strong> FastMCP, ClamAV, Repel, PostgreSQL
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>V · Variables:</strong> Deterministic tolerances &amp; rate parameters
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>O · Outcome:</strong> Pydantic structured output JSON schema
+          </li>
+          <li style={{ fontSize: '11.5px', padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <strong style={{ color: 'var(--accent)' }}>N · Notify:</strong> Telemetry queues, alerts &amp; HITL triggers
+          </li>
+        </ul>
       </Section>
-      <Section title="Pipeline Run Context">
+
+      <Section title="Grounding & Model Verification">
         <dl className="kv">
-          <div><dt>RAG Run ID</dt><dd className="mono xs">{runId ?? 'baseline'}</dd></div>
-          <div><dt>SOW Status</dt><dd><StatusPill status={sow?.status === 'approved' ? 'pass' : 'running'} text={sow?.status ?? 'pending'} /></dd></div>
+          <div>
+            <dt>Active Model</dt>
+            <dd className="mono xs">
+              <span style={{ color: modelStatus.ready ? 'var(--st-done)' : 'var(--err)' }}>●</span> {modelStatus.modelName}
+            </dd>
+          </div>
+          <div><dt>RAG Run ID</dt><dd className="mono xs">{runId ?? 'certified-run'}</dd></div>
+          <div><dt>SOW Status</dt><dd><StatusPill status={sow?.status === 'approved' ? 'done' : sow?.status === 'regenerating' ? 'running' : 'needs_review'} text={sow?.status ?? 'pending'} /></dd></div>
         </dl>
+        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+          <button className="btn btn-ghost xs" onClick={() => goScreen('2.1')} style={{ flex: 1 }}>
+            <Icon name="link" size={11} />2.1 Graph
+          </button>
+          <button className="btn btn-ghost xs" onClick={() => goScreen('3.2')} style={{ flex: 1 }}>
+            <Icon name="link" size={11} />3.2 Skills
+          </button>
+        </div>
       </Section>
     </Pane>
   )

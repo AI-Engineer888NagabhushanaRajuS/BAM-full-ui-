@@ -11,7 +11,7 @@ import { ACCEPTED_TYPES, AV_NAME, CHUNK_BYTES, chunkCount, MAX_BATCH_BYTES, MAX_
 import { autoPick, chunkNames, fit, ingestionBlock, scanView, triage, MAX_MULTI_BATCH_FILES, MAX_MULTI_BATCH_BYTES, type ScanAction, type Triage } from '../api/scanGate.ts'
 import type { StepProps } from '../App'
 import { useAction } from '../lib/data'
-import { setUi, toast, uploadFiles, uppy, useUi, openPreflight, openOpenConnector, openOpenRouterModal } from '../lib/store'
+import { setUi, toast, uploadFiles, uppy, useUi, openPreflight, openOpenConnector, openOpenRouterModal, openSettings } from '../lib/store'
 import { goScreen } from '../lib/route'
 import { DEMO_RUN, demoControls } from '../lib/demo'
 import { isRunning, ragPipeline, useRag } from '../rag/ragPipeline.ts'
@@ -27,27 +27,29 @@ type Filter = 'all' | UploadRecord['scan']
 type Source = 'files' | 'folder' | 'zip' | 'drop'
 
 const HOWTO: { key: Exclude<Source, 'drop'>; icon: string; title: string; button: string; steps: string[] }[] = [
-  { key: 'files', icon: 'file', title: 'Many files', button: 'Choose files', steps: [
-    'In the file picker, select multiple documents with Ctrl/Cmd or Shift-click.',
-    `Up to ${MAX_BATCH_FILES} files and ${MB(MAX_BATCH_BYTES)} per batch. Files over ${MB(CHUNK_BYTES)} are chunked automatically.`,
+  { key: 'files', icon: 'file', title: 'Single & Multi-Files', button: 'Choose files', steps: [
+    'Select individual or multiple documents (.pdf, .docx, .xlsx, .step, .zip).',
+    'Use Ctrl/Cmd or Shift-click to select multiple files at once.',
+    `Up to ${MAX_BATCH_FILES} files and ${MB(MAX_BATCH_BYTES)} per batch wave.`,
   ] },
-  { key: 'folder', icon: 'expand', title: 'A whole folder', button: 'Choose folder', steps: [
-    'Every file inside subfolders is checked before uploading.',
-    'System files (.DS_Store, Thumbs.db, desktop.ini) are skipped automatically.',
-    `Upload subfolders sequentially or ZIP related files together.`,
+  { key: 'folder', icon: 'folder', title: 'Folder (with Nested ZIPs)', button: 'Choose folder', steps: [
+    'Select an entire project folder or RFQ directory.',
+    'All documents, subdirectories, and nested ZIP archives inside are processed automatically.',
+    'System files (.DS_Store, Thumbs.db) are filtered out automatically.',
   ] },
-  { key: 'zip', icon: 'db', title: 'ZIP archive', button: 'Choose ZIP', steps: [
-    'Compressed archives are unpacked and inspected in quarantine.',
+  { key: 'zip', icon: 'archive', title: 'ZIP Archives', button: 'Choose ZIP', steps: [
+    'Upload a standalone compressed archive.',
+    'Quarantine sandbox decompresses packages for deep heuristic & AST virus scanning.',
     `A ZIP can use the whole ${MB(MAX_UPLOAD_BYTES)} batch quota.`,
   ] },
 ]
 
-function Picker({ source, onPick, children, disabled, className = 'btn btn-secondary sm', style }: {
-  source: Exclude<Source, 'drop'>; onPick: (l: FileList, s: Source) => void; children: React.ReactNode; disabled?: boolean; className?: string; style?: React.CSSProperties
+function Picker({ source, onPick, children, disabled, className = 'btn btn-secondary sm', style, title }: {
+  source: Exclude<Source, 'drop'>; onPick: (l: FileList, s: Source) => void; children: React.ReactNode; disabled?: boolean; className?: string; style?: React.CSSProperties; title?: string
 }) {
   const input = useRef<HTMLInputElement | null>(null)
   return <>
-    <button type="button" className={className} style={style} disabled={disabled} onClick={() => input.current?.click()}>{children}</button>
+    <button type="button" className={className} style={style} disabled={disabled} title={title} onClick={() => input.current?.click()}>{children}</button>
     <input ref={el => { input.current = el; if (el && source === 'folder') el.setAttribute('webkitdirectory', '') }} type="file" hidden
       multiple={source !== 'zip' || undefined} accept={source === 'zip' ? '.zip' : source === 'files' ? ACCEPTED_TYPES.join(',') : undefined}
       onChange={e => { if (e.target.files) onPick(e.target.files, source); e.target.value = '' }} />
@@ -56,9 +58,11 @@ function Picker({ source, onPick, children, disabled, className = 'btn btn-secon
 
 function BulkDialog({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (l: FileList, s: Source) => void }) {
   return (
-    <Dialog open={open} title="Bulk upload" onClose={onClose} className="dialog wide"
+    <Dialog open={open} title="Intake Document & Package Assistant" onClose={onClose} className="dialog wide"
       footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}>
-      <p className="muted sm">Select files, folders, or archives. Incompatible files are filtered out automatically before entering quarantine.</p>
+      <p className="muted sm" style={{ margin: '0 0 12px 0' }}>
+        Select files, full project directories, or compressed archives. If you choose a folder with nested ZIP archives, every contained document and archive is automatically discovered and staged for zero-trust scanning.
+      </p>
       <div className="howto">
         {HOWTO.map(h => (
           <section key={h.key} className="howto-card">
@@ -250,34 +254,41 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
 
   const [animatingStep, setAnimatingStep] = useState<number | null>(null)
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isRunningRef = useRef(false)
   const prevUploadsCount = useRef(uploads.length)
 
   const runSequentialFlow = (targetStep = 1) => {
     if (animationTimer.current) clearTimeout(animationTimer.current)
     if (targetStep <= 6) {
+      isRunningRef.current = true
       setAnimatingStep(targetStep)
       animationTimer.current = setTimeout(() => {
         runSequentialFlow(targetStep + 1)
-      }, targetStep === 1 ? 550 : targetStep === 2 ? 600 : targetStep === 3 ? 700 : targetStep === 4 ? 650 : targetStep === 5 ? 600 : 650)
+      }, 120) // Fast 120ms per step = 720ms total sequence
     } else {
       setAnimatingStep(null)
+      isRunningRef.current = false
       if (uploads.length > 0) {
         toast(`🎉 BuLL*Sav & Repel Security Scanning Complete! All ${uploads.length} files verified clean. Auto-launching Pre-Flight Cockpit...`, 'success')
-        setTimeout(() => openPreflight(), 600)
+        setTimeout(() => openPreflight(), 400)
       }
     }
   }
 
-  // Auto-trigger sequential animation when batch is loaded or uploads start
+  // Auto-trigger fast sequential animation only on first upload transition
   useEffect(() => {
-    if (uploads.length > 0 && prevUploadsCount.current === 0) {
+    if (uploads.length > 0 && prevUploadsCount.current === 0 && !isRunningRef.current) {
       runSequentialFlow(1)
     }
     prevUploadsCount.current = uploads.length
+  }, [uploads.length])
+
+  // Cleanup ONLY on unmount
+  useEffect(() => {
     return () => {
       if (animationTimer.current) clearTimeout(animationTimer.current)
     }
-  }, [uploads.length])
+  }, [])
 
   // Expose runSequentialFlow globally for external triggers
   useEffect(() => {
@@ -304,7 +315,7 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
       }[state]
 
   type St = 'idle' | 'active' | 'done' | 'alert'
-  const resolved = total > 0 && !pending.length
+  const resolved = total > 0 && !pending.length && !blocked && !errors
 
   const nodes: { label: string; st: St; count: string; icon: string }[] = isSimulating
     ? FLOW_STAGES.map((fs, idx) => {
@@ -314,19 +325,21 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
         return { label: fs.label, icon: fs.icon, st, count }
       })
     : [
-        { label: 'Upload', icon: 'upload', st: sending.length ? 'active' : failed.length ? 'alert' : total ? 'done' : 'idle',
+        { label: 'Upload & Ingest', icon: 'upload', st: sending.length ? 'active' : failed.length ? 'alert' : total ? 'done' : 'idle',
           count: sending.length ? `${sendPct}%` : failed.length ? `${failed.length} failed` : total ? `${total} sent` : '—' },
-        { label: 'Quarantine', icon: 'lock', st: queued ? 'active' : total ? 'done' : 'idle', count: queued ? `${queued} waiting` : total ? `${total} held` : '—' },
-        { label: 'BuLL*Sav ClamAV', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
-        { label: 'Repel Shield', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
+        { label: 'Quarantine Sandbox', icon: 'lock', st: queued ? 'active' : total ? 'done' : 'idle', count: queued ? `${queued} waiting` : total ? 'Cleared' : '—' },
+        { label: 'BuLL*Sav ClamAV', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total} clean` : '—' },
+        { label: 'Repel Shield', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total} clean` : '—' },
         { label: 'AST Inspection', icon: 'code', st: blocked ? 'alert' : resolved ? 'done' : clean ? 'active' : 'idle', count: total ? `${clean} clean` : '—' },
-        { label: 'Released', icon: 'bolt', st: released && released === total ? 'done' : released ? 'active' : 'idle', count: total ? `${released} of ${total}` : '—' },
+        { label: 'Released', icon: 'bolt', st: resolved ? 'done' : released ? 'active' : 'idle', count: total ? `${released || total} of ${total}` : '—' },
       ]
 
   const pct = isSimulating
     ? Math.round((animatingStep / 6) * 100)
     : sending.length && !pending.length
     ? sendPct
+    : resolved
+    ? 100
     : total
     ? Math.round(((total - pending.length) / total) * 100)
     : 0
@@ -374,6 +387,7 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
   )
 }
 
+
 /** 1.1 Intake console with Three-Pane Workbench */
 export function Intake({ snap, info }: StepProps) {
   const rag = useRag(s => s)
@@ -384,7 +398,6 @@ export function Intake({ snap, info }: StepProps) {
   const [outcome, setOutcome] = useState<ScanOutcome>('clean')
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
-  const [showSecurityDetails, setShowSecurityDetails] = useState(false)
 
   // Directives state
   const fdeGoals = useUi(s => s.fdeGoals ?? '')
@@ -462,7 +475,7 @@ export function Intake({ snap, info }: StepProps) {
       localStorage.removeItem('uppy-state')
     } catch {}
     await run('Reset staged uploads', () => api.resetAllUploads(), { step: 1 })
-    toast('Quarantine & staged files flushed. Browser memory restored.', 'info', '1.1')
+    toast('Quarantine & staged files cleared. Browser memory restored.', 'info', '1.1')
   }
 
   const send = (files: File[]) => {
@@ -511,6 +524,12 @@ export function Intake({ snap, info }: StepProps) {
 
   const start = async () => {
     if (startingRef.current) return
+    const currentModel = getModelGateStatus()
+    if (!currentModel.ready) {
+      toast(`🚨 Inference Model Gate: ${currentModel.reason || 'OpenRouter API Key or Local Engine required before entering RAG.'}`, 'error', '1.1')
+      openSettings('keys')
+      return false
+    }
     startingRef.current = true
     const r = await run('Start ingestion run', () => api.startIngestionRun(), { step: 1 })
     startingRef.current = false
@@ -559,8 +578,88 @@ export function Intake({ snap, info }: StepProps) {
   const qualityPct = total > 0 && clean === total ? 96 : total > 0 ? 60 : 0
   const overallReadiness = Math.round((sourcesPct * 0.4) + (coveragePct * 0.3) + (qualityPct * 0.3))
 
+  // Full-screen window drag-and-drop state
+  const [isDraggingWindow, setIsDraggingWindow] = useState(false)
+  const dragCounter = useRef(0)
+
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current += 1
+      if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) {
+        setIsDraggingWindow(true)
+      }
+    }
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current -= 1
+      if (dragCounter.current <= 0) {
+        dragCounter.current = 0
+        setIsDraggingWindow(false)
+      }
+    }
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy'
+      }
+    }
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current = 0
+      setIsDraggingWindow(false)
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        take(e.dataTransfer.files, 'drop')
+      }
+    }
+
+    window.addEventListener('dragenter', handleDragEnter)
+    window.addEventListener('dragleave', handleDragLeave)
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('drop', handleDrop)
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter)
+      window.removeEventListener('dragleave', handleDragLeave)
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('drop', handleDrop)
+    }
+  }, [])
+
   return (
     <main className="intake-workbench-wrap">
+      {/* Full-Screen Glass Drop Target */}
+      {isDraggingWindow && (
+        <div
+          className="fullscreen-drop-overlay"
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => {
+            e.preventDefault()
+            setIsDraggingWindow(false)
+            dragCounter.current = 0
+            if (e.dataTransfer?.files?.length) {
+              take(e.dataTransfer.files, 'drop')
+            }
+          }}
+        >
+          <div className="fullscreen-drop-modal">
+            <div className="fullscreen-drop-icon">
+              <Icon name="upload" size={36} />
+            </div>
+            <h2 style={{ margin: '6px 0 2px', fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+              Drop Documents or Folders Anywhere
+            </h2>
+            <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--muted)' }}>
+              Adaptive intake: CAD STEP, PDF drawings, XLSX BOMs, specifications
+            </p>
+            <div style={{ marginTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <span className="pill tone-ok sm">✓ BuLL*Sav Zero-Trust Quarantine Active</span>
+              <span className="pill tone-info sm">ClamAV + Repel Shield Ready</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stage 1 Subhead with Workflow Trigger */}
       <header className="intake-subhead">
         <div>
@@ -656,31 +755,28 @@ export function Intake({ snap, info }: StepProps) {
               </div>
             )}
 
-            {/* Quick Upload Actions */}
+            {/* Adaptive Intake Action */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-              <Picker source="files" onPick={take} disabled={!!closed} className="btn btn-primary sm" style={{ width: '100%', justifyContent: 'center' }}>
-                <Icon name="upload" size={12} />
-                <span>Upload files</span>
-              </Picker>
-              <button
-                type="button"
-                className="btn btn-secondary sm"
+              <Picker
+                source="files"
+                onPick={take}
                 disabled={!!closed}
-                onClick={() => setBulk(true)}
-                style={{ width: '100%', justifyContent: 'center' }}
+                className="btn btn-primary sm"
+                style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
               >
-                <span>Bulk upload</span>
-              </button>
+                <Icon name="plus" size={12} />
+                <span>Add Documents / Folder</span>
+              </Picker>
               {total > 0 && (
                 <button
                   type="button"
                   className="btn btn-ghost sm"
                   onClick={emergencyReset}
-                  style={{ width: '100%', justifyContent: 'center', color: 'var(--err)', fontSize: '11.5px' }}
-                  title="Flush all staged uploads and clear memory"
+                  style={{ width: '100%', justifyContent: 'center', color: 'var(--err)', fontSize: '11.5px', gap: '6px' }}
+                  title="Clear all staged files and reset memory"
                 >
-                  <Icon name="x" size={11} />
-                  <span>Flush staged files ({total})</span>
+                  <Icon name="trash" size={11} />
+                  <span>Clear Staged Files ({total})</span>
                 </button>
               )}
             </div>
@@ -730,20 +826,129 @@ export function Intake({ snap, info }: StepProps) {
             </button>
           </div>
 
-          {/* FDE Directives Card */}
-          <div className="wb-card fde-goals-card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--accent-soft)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flex: 'none' }}>
-                <Icon name="file" size={16} />
+          {/* Central Intelligent Intake Command Bar */}
+          <div className="wb-card intake-command-bar">
+            <div className="intake-command-header">
+              <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                <div className="command-bar-icon-box">
+                  <Icon name="bolt" size={15} />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                    Intelligent Intake &amp; Objective Command
+                  </h4>
+                  <span className="xs muted">
+                    Set scope &amp; constraints · Speak, type, or drop files anywhere on screen
+                  </span>
+                </div>
               </div>
-              <div>
-                <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>What do you need from these documents?</h4>
-                <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Set the scope, constraints, and expected output before running ingestion.</p>
+
+              {demo && (
+                <button
+                  type="button"
+                  className="btn btn-secondary sm demo-batch-pill"
+                  disabled={!!snap.ingestion}
+                  onClick={() => {
+                    demo.loadScanFixture()
+                    void run('Load fixture', async () => {})
+                    toast('Loaded Meridian Aerospace RFQ package (21 files). BuLL*Sav scanning triggered.', 'success')
+                  }}
+                  title="1-click load pre-built industrial RFQ batch with 21 aerospace documents"
+                >
+                  <Icon name="bolt" size={11} />
+                  <span>⚡ Load Industrial RFQ Batch (21 Docs)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Main Textarea Container */}
+            <div className="intake-command-input-container">
+              <textarea
+                id="fde-obj-input"
+                className="intake-command-textarea"
+                rows={2}
+                value={goals}
+                onChange={e => saveGoals(e.target.value)}
+                placeholder="Type intake directives (e.g. Extract CAD STEP tolerances, verify 17-4PH certs, calculate Tier-1 EMS SMT rates)..."
+              />
+
+              {/* Integrated Action Row inside the Bar */}
+              <div className="intake-command-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div className="intake-command-left-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <Picker
+                    source="files"
+                    onPick={take}
+                    disabled={!!closed}
+                    className="btn btn-primary sm"
+                    title="Select documents to intake"
+                  >
+                    <Icon name="file" size={12} />
+                    <span>Choose files</span>
+                  </Picker>
+                  <Picker
+                    source="folder"
+                    onPick={take}
+                    disabled={!!closed}
+                    className="btn btn-secondary sm"
+                    title="Upload entire folder"
+                  >
+                    <Icon name="folder" size={12} />
+                    <span>Choose folder</span>
+                  </Picker>
+                  <Picker
+                    source="zip"
+                    onPick={take}
+                    disabled={!!closed}
+                    className="btn btn-secondary sm"
+                    title="Upload archive zip"
+                  >
+                    <Icon name="archive" size={12} />
+                    <span>Upload zip</span>
+                  </Picker>
+                  <button
+                    type="button"
+                    className="btn btn-secondary sm"
+                    disabled={!!closed}
+                    onClick={() => setBulk(true)}
+                    title="Open bulk upload assistant"
+                  >
+                    <Icon name="upload" size={12} />
+                    <span>Bulk upload</span>
+                  </button>
+
+                  {/* Voice Dictation Button */}
+                  <button
+                    type="button"
+                    className={`btn sm voice-mic-btn ${listening ? 'is-recording' : 'btn-ghost'}`}
+                    onClick={toggleVoice}
+                    title="Windows native voice-to-text dictation"
+                    style={{ fontSize: '11px', padding: '2px 8px', height: '26px' }}
+                  >
+                    <span className={`voice-pulse-dot ${listening ? 'pulsing' : ''}`} />
+                    <Icon name="bolt" size={11} />
+                    <span>{listening ? 'Listening...' : 'Voice'}</span>
+                  </button>
+                </div>
+
+                <div className="intake-command-right-actions">
+                  <span className={`xs ${goals.trim() ? 'tone-ok' : 'muted'}`} style={{ marginRight: '6px' }}>
+                    {goals.trim() ? '✓ Saved' : 'No objective'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-primary sm"
+                    onClick={() => { saveGoals(goals); toast('Intake objective saved.', 'success') }}
+                    style={{ height: '26px', fontSize: '11.5px', padding: '2px 10px' }}
+                  >
+                    <span>Save Objective</span>
+                    <Icon name="chevron" size={10} />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Quick Directive Chips */}
-            <div className="fde-goals-presets" style={{ marginTop: '4px' }}>
+            <div className="fde-goals-presets" style={{ marginTop: '2px' }}>
               {PRESETS.map((p, i) => (
                 <button
                   key={i}
@@ -753,137 +958,16 @@ export function Intake({ snap, info }: StepProps) {
                     const next = goals.includes(p) ? goals : goals.trim() ? `${goals.trim()}; ${p}` : p
                     saveGoals(next)
                   }}
-                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                  style={{ fontSize: '11px', padding: '3px 8px' }}
                 >
                   {p}
                 </button>
               ))}
             </div>
-
-            {/* Objective Textarea Container */}
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px',
-              borderRadius: '8px', background: 'var(--surface)', border: '1px solid var(--border)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <label htmlFor="fde-obj-input" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>
-                  Intake objective
-                </label>
-                <button
-                  type="button"
-                  className={`btn sm voice-mic-btn ${listening ? 'is-recording' : 'btn-ghost'}`}
-                  onClick={toggleVoice}
-                  title="Windows native voice-to-text dictation"
-                  style={{ fontSize: '11px', padding: '2px 6px', height: '24px' }}
-                >
-                  <span className={`voice-pulse-dot ${listening ? 'pulsing' : ''}`} />
-                  <Icon name="bolt" size={11} />
-                  <span>{listening ? 'Listening...' : 'Voice Dictate'}</span>
-                </button>
-              </div>
-
-              <textarea
-                id="fde-obj-input"
-                className="fde-goals-textarea"
-                rows={2}
-                value={goals}
-                onChange={e => saveGoals(e.target.value)}
-                placeholder="Describe your objective and constraints (e.g. Extract CAD STEP tolerances, verify 17-4PH material certs, apply Tier-1 EMS SMT rates)..."
-                style={{ border: 'none', padding: '4px 0', background: 'transparent', resize: 'vertical', minHeight: '48px', fontSize: '12.5px' }}
-              />
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid var(--border)' }}>
-                <span className={`xs ${goals.trim() ? 'tone-ok' : 'muted'}`}>
-                  {goals.trim() ? '✓ Objective saved' : 'No objective saved'}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-secondary sm"
-                  onClick={() => { saveGoals(goals); toast('Intake objective saved.', 'success') }}
-                  style={{ fontSize: '11.5px', padding: '2px 10px', height: '24px' }}
-                >
-                  <span>Save objective</span>
-                  <Icon name="chevron" size={10} />
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Clean Upload Dropzone (Image 2 style) */}
-          <div
-            className="wb-dropzone scan-drop"
-            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('over') }}
-            onDragLeave={e => { e.currentTarget.classList.remove('over') }}
-            onDrop={e => { e.preventDefault(); e.currentTarget.classList.remove('over'); take(e.dataTransfer.files, 'drop') }}
-          >
-            <div className="wb-dropzone-icon">
-              <Icon name="upload" size={24} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '14.5px', color: 'var(--text)' }}>Drag &amp; drop files, folders, or archives</strong>
-              <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>or click to browse from your computer</div>
-            </div>
-            <span className="xs muted" style={{ fontSize: '11px', maxWidth: '420px' }}>
-              Supported: CAD STEP, PDF, DOCX, XLSX, CSV, JSON, TXT, MD, PPTX, ZIP (up to {MAX_BATCH_FILES} files / {MB(MAX_BATCH_BYTES)})
-            </span>
-            <div className="row" style={{ gap: '8px', marginTop: '6px' }}>
-              <Picker source="files" onPick={take} disabled={!!closed} className="btn btn-primary sm">
-                <Icon name="upload" size={12} />
-                <span>Browse files</span>
-              </Picker>
-              <button type="button" className="btn btn-secondary sm" disabled={!!closed} onClick={() => setBulk(true)}>
-                <span>Bulk upload</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Supported Ingestion Modalities Card */}
-          <div className="wb-card" style={{ padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
-              <span className="xs muted" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Supported Ingestion Modalities (BuLLM Engine)
-              </span>
-              <span className="pill sm pill-pass">Multi-Channel Active</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px' }}>
-              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
-                  <Icon name="upload" size={11} />
-                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>A. Browser Resumable</strong>
-                </div>
-                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
-                  Refine.dev + Uppy + tusd
-                </div>
-              </div>
-              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
-                  <Icon name="bolt" size={11} />
-                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B1. Air-Gapped Watchdog</strong>
-                </div>
-                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
-                  services/watcher.py (.tmp &gt;&gt; .pdf)
-                </div>
-              </div>
-              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
-                  <Icon name="shield" size={11} />
-                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B2. Inbound Email</strong>
-                </div>
-                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
-                  FastMCP Webhook (&lt;25MB)
-                </div>
-              </div>
-              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
-                  <Icon name="db" size={11} />
-                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B3/B4. Cloud &amp; SFTP</strong>
-                </div>
-                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
-                  AWS S3 DLQ / Temporal pull
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Real-time Live 6-Node BuLL*Sav & Repel Animated Scanning Pipeline (Prominently at eye-level directly beneath Command Bar!) */}
+          <AvStatus uploads={snap.uploads} />
 
           {/* Staged Files Table (when files exist) */}
           {total > 0 && (
@@ -895,11 +979,11 @@ export function Intake({ snap, info }: StepProps) {
                     type="button"
                     className="btn btn-ghost sm"
                     onClick={emergencyReset}
-                    style={{ color: 'var(--err)', fontSize: '11px', padding: '1px 6px', height: '20px' }}
-                    title="Flush all staged files and clear memory"
+                    style={{ color: 'var(--err)', fontSize: '11px', padding: '1px 6px', height: '20px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    title="Clear all staged files and reset memory"
                   >
-                    <Icon name="x" size={10} />
-                    <span>Flush All</span>
+                    <Icon name="trash" size={10} />
+                    <span>Clear All</span>
                   </button>
                 </div>
                 <span className="xs tone-ok">✓ BuLL*Sav Protection Active</span>
@@ -948,8 +1032,54 @@ export function Intake({ snap, info }: StepProps) {
             </div>
           )}
 
-          {/* Real-time Live 6-Node BuLL*Sav & Repel Animated Scanning Pipeline */}
-          <AvStatus uploads={snap.uploads} />
+          {/* Supported Ingestion Modalities Accordion (Hidden by default to protect IP) */}
+          <details className="ingestion-modalities-accordion">
+            <summary className="ingestion-modalities-summary">
+              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                <Icon name="info" size={12} />
+                <span>Ingestion Architecture &amp; Data Pipelines (BuLLM Engine)</span>
+              </div>
+              <span className="xs muted">Click to expand</span>
+            </summary>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px', marginTop: '8px' }}>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="upload" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>A. Browser Resumable</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  Refine.dev + Uppy + tusd
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="bolt" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B1. Air-Gapped Watchdog</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  services/watcher.py (.tmp &gt;&gt; .pdf)
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="shield" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B2. Inbound Email</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  FastMCP Webhook (&lt;25MB)
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="db" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B3/B4. Cloud &amp; SFTP</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  AWS S3 DLQ / Temporal pull
+                </div>
+              </div>
+            </div>
+          </details>
 
           {/* Model Gating Banner if Model / Key is required */}
           {!modelStatus.ready && (
@@ -962,15 +1092,26 @@ export function Intake({ snap, info }: StepProps) {
                 <Icon name="alert" size={14} style={{ color: 'var(--accent)' }} />
                 <span style={{ fontSize: '12px', fontWeight: 600 }}>{modelStatus.reason}</span>
               </div>
-              <button
-                type="button"
-                className="btn btn-primary sm"
-                onClick={openOpenRouterModal}
-                style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
-              >
-                <Icon name="bolt" size={11} />
-                <span>Select Model</span>
-              </button>
+              <div className="row" style={{ gap: '6px' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary sm"
+                  onClick={() => openSettings('keys')}
+                  style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
+                >
+                  <Icon name="lock" size={11} />
+                  <span>Configure API Key</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary sm"
+                  onClick={() => openSettings('engines')}
+                  style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
+                >
+                  <Icon name="bolt" size={11} />
+                  <span>Select Engine</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -1128,112 +1269,14 @@ export function Intake({ snap, info }: StepProps) {
             <span className="xs muted ta-c" style={{ fontSize: '10.5px' }}>
               Available after required inputs and checks pass.
             </span>
-          </div>
 
-          {/* Card 2: BULL*SAV PROTECTION CORE (Unified Security, NO clamav/repel step clutter!) */}
-          <div className="wb-card bullsav-shield-card">
-            {/* Watermark shield icon from Image 2 */}
-            <div className="bullsav-watermark" aria-hidden="true">
-              <svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
-              </svg>
-            </div>
-
-            <div className="wb-card-head" style={{ position: 'relative', zIndex: 1 }}>
-              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
-                <Icon name="shield" size={14} />
-                <h4 className="wb-card-title">BuLL*Sav Core</h4>
-              </div>
-              <StatusPill status="pass" text="Active" />
-            </div>
-
-            <p className="xs muted" style={{ margin: 0, position: 'relative', zIndex: 1, lineHeight: 1.4 }}>
-              Zero-trust dual defense perimeter: static signature screening &amp; behavioral heuristic repulsion unified under BuLL*Sav. Fail-closed gate guarantees zero unverified bytes enter Cognee GraphRAG.
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', position: 'relative', zIndex: 1 }}>
-              <span className="muted">Threat feed: Continuous</span>
-              <button
-                type="button"
-                className="link xs"
-                onClick={() => setShowSecurityDetails(v => !v)}
-              >
-                {showSecurityDetails ? 'Hide details' : 'Details >'}
+            {/* Minimal Activity Log Link */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px 0', borderTop: '1px solid var(--border)', fontSize: '11px', marginTop: '6px' }}>
+              <span className="muted">Activity: {snap.scanEvents.length} events logged</span>
+              <button type="button" className="link xs" onClick={() => setShowLogs(true)}>
+                View log &gt;
               </button>
             </div>
-
-            {showSecurityDetails && (
-              <div style={{
-                padding: '8px 10px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', position: 'relative', zIndex: 1
-              }}>
-                <div><strong>Signature Engine:</strong> BuLL*Sav ClamAV Core (MD5/SHA256 &amp; Macro AST)</div>
-                <div><strong>Evasion Engine:</strong> Repel Heuristic Shield (Prompt injection defense)</div>
-                <div><strong>Policy:</strong> Fail-Closed Strict Quarantine</div>
-              </div>
-            )}
-          </div>
-
-          {/* Card: OOMOL UNIVERSAL CONNECTORS HUB (oomol.com) */}
-          <div className="wb-card oomol-hub-card" style={{ border: '1px solid color-mix(in srgb, var(--accent) 30%, var(--border))' }}>
-            <div className="wb-card-head">
-              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
-                <Icon name="bolt" size={13} style={{ color: 'var(--accent)' }} />
-                <h4 className="wb-card-title">OOMOL Connectors</h4>
-              </div>
-              <span className="badge sm" style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: 'var(--accent)' }}>
-                8 Active
-              </span>
-            </div>
-            <p className="xs muted" style={{ margin: 0, lineHeight: 1.4 }}>
-              Zero-secret credential boundary (<a href="https://oomol.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>oomol.com</a>). Action contracts for SAP S/4HANA, DigiKey, Mouser, GitHub, Drive &amp; FastMCP.
-            </p>
-            <button
-              type="button"
-              className="btn btn-secondary sm"
-              onClick={openOpenConnector}
-              style={{ width: '100%', justifyContent: 'center', fontSize: '11.5px', marginTop: '4px' }}
-            >
-              <Icon name="link" size={11} />
-              <span>Manage OOMOL Connectors Hub</span>
-            </button>
-          </div>
-
-          {/* Card 3: SIMULATION MODE (Image 2) */}
-          <div className="wb-card" style={{ background: 'color-mix(in srgb, var(--warn) 4%, var(--surface-2))' }}>
-            <div className="wb-card-head">
-              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
-                <Icon name="code" size={13} />
-                <h4 className="wb-card-title">Simulation Mode</h4>
-              </div>
-              <span className="badge sm" style={{ background: 'var(--warn-soft)', color: 'var(--warn)' }}>Active</span>
-            </div>
-            <p className="xs muted" style={{ margin: 0, lineHeight: 1.4 }}>
-              Interactive sandbox execution. Stage discovery files or load pre-built industrial RFQ packages.
-            </p>
-
-            {demo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary sm"
-                  disabled={!!snap.ingestion}
-                  onClick={() => { demo.loadScanFixture(); void run('Load fixture', async () => {}) }}
-                  style={{ width: '100%', justifyContent: 'center', fontSize: '11.5px' }}
-                >
-                  <Icon name="bolt" size={11} />
-                  <span>Load mockup batch</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Card 4: SCAN ACTIVITY FOOTER */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '11.5px' }}>
-            <span className="muted">Activity: {snap.scanEvents.length} events logged</span>
-            <button type="button" className="link xs" onClick={() => setShowLogs(true)}>
-              View log &gt;
-            </button>
           </div>
         </aside>
       </div>

@@ -3,7 +3,7 @@ import { AgGridReact } from 'ag-grid-react'
 import type { ColDef } from 'ag-grid-community'
 import { gridTheme } from '../steps/Step2'
 import { Icon, StatusPill, Copy } from '../components/ui'
-import { toast, openOpenRouterModal, openOpenConnector } from '../lib/store'
+import { toast, openOpenRouterModal, openOpenConnector, openSettings } from '../lib/store'
 import { goScreen } from '../lib/route'
 import { api } from '../api/adapter'
 import { queryContextGraph } from '../api/sowEval'
@@ -330,6 +330,12 @@ export function CogneePreflightCockpit({ onPushToSowSuccess }: { onPushToSowSucc
 
   // Run full automated pre-flight suite
   const runFullSuite = async () => {
+    const currentModelStatus = getModelGateStatus()
+    if (!currentModelStatus.ready) {
+      toast(`🚨 Model & API Key Required: ${currentModelStatus.reason || 'Configure OpenRouter API Key or select Local engine in Settings before evaluating.'}`, 'error')
+      openSettings('keys')
+      return
+    }
     setRunningSuite(true)
     setChecks(prev => prev.map(c => ({ ...c, status: 'running' })))
     const updatedChecks: PreflightCheck[] = []
@@ -381,6 +387,12 @@ export function CogneePreflightCockpit({ onPushToSowSuccess }: { onPushToSowSucc
 
   // Individual re-test of single check
   const retestCheck = async (id: string) => {
+    const currentModelStatus = getModelGateStatus()
+    if (!currentModelStatus.ready) {
+      toast(`🚨 Model & API Key Required: ${currentModelStatus.reason || 'Configure OpenRouter API Key in Settings.'}`, 'error')
+      openSettings('keys')
+      return
+    }
     const item = checks.find(c => c.id === id)
     if (!item) return
     setChecks(prev => prev.map(c => (c.id === id ? { ...c, status: 'running' } : c)))

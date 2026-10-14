@@ -31,6 +31,9 @@ export function evidenceStatuses(snap: Snapshot, rag: RagState): Record<string, 
   const review: TrackerStatus = !wf ? 'not_started' : wf.status === 'running' ? 'in_progress' : wf.status === 'failed' ? 'blocked' : approved ? 'done' : 'needs_review'
   // Only a hand-off from the current RAG run counts; one from an earlier run does not complete 2.2/2.4.
   const handedOff = schemas === 'done' ? (rag.handoffs.some(h => h.contextVersion === rag.runId) ? 'done' : 'needs_review') : schemas
+  // Stage 2 must pass before Stage 3/4 can show progress or completion
+  const ragPassed = !!rag.runId && schemas === 'done' && !rag.steps.some(s => s.status === 'failed')
+
   const ev: Record<string, TrackerStatus> = {
     // 1.1 completes when its scan-gated ingestion run starts, not on upload.
     '1.1': snap.ingestion ? 'done' : snap.uploads.some(u => u.scan === 'blocked' || u.scanError) ? 'blocked' : uploads ? 'in_progress' : 'not_started',
@@ -44,17 +47,19 @@ export function evidenceStatuses(snap: Snapshot, rag: RagState): Record<string, 
     '2.2': handedOff,
     '2.3': graph,
     '2.4': handedOff,
-    '3.1': sow?.status === 'approved' ? 'done'
-      : gen.some(s => s.status === 'failed') ? 'blocked'
-      : sow?.status === 'regenerating' || gen.some(s => s.status === 'running' || s.status === 'queued') ? 'in_progress'
-      : sow ? 'needs_review' : 'not_started',
-    '3.2': FROM_STEP[snap.steps[1].state],
-    '3.3': review,
-    '3.4': !wf?.manifest ? 'not_started' : approved ? 'done' : 'needs_review',
-    '4.1': !wf ? 'not_started' : wf.status === 'running' ? 'in_progress' : wf.status === 'failed' ? 'blocked' : 'done',
-    '4.2': review,
-    '4.3': review,
-    '4.4': FROM_STEP[snap.steps[3].state],
+    '3.1': !ragPassed
+      ? (gen.some(s => s.status === 'running' || s.status === 'queued') ? 'in_progress' : rag.steps.some(s => s.status === 'failed') || gen.some(s => s.status === 'failed') ? 'blocked' : 'not_started')
+      : (sow?.status === 'approved' ? 'done'
+        : gen.some(s => s.status === 'failed') ? 'blocked'
+        : sow?.status === 'regenerating' || gen.some(s => s.status === 'running' || s.status === 'queued') ? 'in_progress'
+        : sow ? 'needs_review' : 'not_started'),
+    '3.2': !ragPassed ? 'not_started' : FROM_STEP[snap.steps[1].state],
+    '3.3': !ragPassed ? 'not_started' : review,
+    '3.4': !ragPassed ? 'not_started' : (!wf?.manifest ? 'not_started' : approved ? 'done' : 'needs_review'),
+    '4.1': !ragPassed ? 'not_started' : (!wf ? 'not_started' : wf.status === 'running' ? 'in_progress' : wf.status === 'failed' ? 'blocked' : 'done'),
+    '4.2': !ragPassed ? 'not_started' : review,
+    '4.3': !ragPassed ? 'not_started' : review,
+    '4.4': !ragPassed ? 'not_started' : FROM_STEP[snap.steps[3].state],
   }
   // Work built on an earlier RAG run is kept but shows as not started (marked "from previous run" by previousRun()).
   for (const id of previousRun(snap, rag)) ev[id] = 'not_started'

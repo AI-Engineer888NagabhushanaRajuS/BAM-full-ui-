@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { goScreen, usePath } from '../lib/route'
 import { Icon } from '../components/ui'
 import { Toasts } from '../components/shell'
@@ -37,26 +37,39 @@ function ProgressPie({ done, total, status }: { done: number; total: number; sta
   )
 }
 
-// Two different numbers: where you are (current screen position) and how many screens are done.
 function TrackerTask({ item, open, currentScreen, onToggle, setRef }: { item: TrackerItem; open: boolean; currentScreen?: string; onToggle: () => void; setRef: (el: HTMLButtonElement | null) => void }) {
   const statuses = useStatuses()
   const screens = subtasksOf(item.id)
   const status = taskStatus(item.id, statuses)
   const done = doneCount(screens, statuses)
-  const pos = currentScreen ? screens.findIndex(s => s.id === currentScreen) + 1 : 0
-  const prev = useTrackerStore(t => screens.filter(s => t.previous.includes(s.id)).length)
+  const isDone = done === screens.length && screens.length > 0
+  const isCurrent = !!currentScreen
+
   return (
-    <button ref={setRef} id={`tracker-stage-${item.id}`} aria-expanded={open} aria-controls={`tracker-panel-${item.id}`}
-      className={`tracker-task s-${status} ${open ? 'open' : ''} ${pos ? 'current' : ''}`} onClick={onToggle}
-      aria-current={pos ? 'location' : undefined}
-      aria-label={`Stage ${item.id}: ${item.label}.${pos ? ` You are on screen ${currentScreen}, ${pos} of ${screens.length}.` : ''} ${done} of ${screens.length} screens done.${prev ? ` ${prev} from a previous run.` : ''} ${STATUS_LABEL[status]}.`}>
-      <span className="tt-num" aria-hidden>{item.id}</span>
-      <span className="tt-label">{item.shortLabel}</span>
-      {pos > 0 && <span className="tt-pos" aria-hidden title={`You are on ${currentScreen} (screen ${pos} of ${screens.length})`}>at {currentScreen}</span>}
-      <span className="tt-count" aria-hidden title={`${done} of ${screens.length} screens done${prev ? `; ${prev} from a previous RAG run (not counted)` : ''}`}>{done}/{screens.length} done</span>
-      {prev > 0 && <span className="tt-prev" aria-hidden title="This stage's work was built on an earlier RAG run">previous run</span>}
-      <ProgressPie done={done} total={screens.length} status={status} />
-      <span className={`tt-chev ${open ? 'up' : ''}`} aria-hidden><Icon name="down" size={12} /></span>
+    <button
+      ref={setRef}
+      id={`tracker-stage-${item.id}`}
+      aria-expanded={open}
+      aria-controls={`tracker-panel-${item.id}`}
+      className={`tracker-pill s-${status} ${open ? 'is-open' : ''} ${isCurrent ? 'is-active' : ''}`}
+      onClick={onToggle}
+      aria-current={isCurrent ? 'location' : undefined}
+      title={`Stage ${item.id}: ${item.label} (${done}/${screens.length} screens done)`}
+    >
+      <span className={`tracker-pill-num ${isDone ? 'done' : isCurrent ? 'active' : ''}`}>
+        {isDone ? <Icon name="check" size={10} /> : item.id}
+      </span>
+      <span className="tracker-pill-label">{item.shortLabel}</span>
+      {isCurrent ? (
+        <span className="tracker-pill-badge active">{currentScreen}</span>
+      ) : isDone ? (
+        <span className="tracker-pill-badge done">Done</span>
+      ) : (
+        <span className="tracker-pill-badge count">{done}/{screens.length}</span>
+      )}
+      <span className={`tracker-pill-chev ${open ? 'up' : ''}`} aria-hidden>
+        <Icon name="down" size={9} />
+      </span>
     </button>
   )
 }
@@ -130,6 +143,13 @@ export function TrackerStrip() {
   const currentScreen = screenByPath(usePath())?.id
   const currentStage = currentScreen?.split('.')[0]
 
+  // Only sync openTask if the user has explicitly opened the stage sub-task drawer
+  useEffect(() => {
+    if (openTask && currentStage && openTask !== currentStage) {
+      setTracker({ openTask: currentStage, selected: null })
+    }
+  }, [currentStage, openTask])
+
   // Opening a stage also opens its first built screen; closing it leaves you where you are.
   const toggle = (id: string) => {
     const opening = openTask !== id
@@ -159,7 +179,7 @@ export function TrackerStrip() {
         <nav className="tracker-strip" aria-label="BAM stages">
           {TASKS.map((t, i) => (
             <span key={t.id} className="tracker-cell">
-              {i > 0 && <span className="tracker-arrow" aria-hidden>→</span>}
+              {i > 0 && <span className="tracker-sep" aria-hidden><Icon name="chevron" size={10} /></span>}
               <TrackerTask item={t} open={openTask === t.id} currentScreen={currentStage === t.id ? currentScreen : undefined} onToggle={() => toggle(t.id)} setRef={el => { triggers.current[t.id] = el }} />
             </span>
           ))}
