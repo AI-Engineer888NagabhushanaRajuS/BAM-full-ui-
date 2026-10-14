@@ -47,9 +47,10 @@ const paths: Record<string, ReactNode> = {
   code: <path d="M5.5 5L2.5 8l3 3M10.5 5l3 3-3 3" />,
 }
 
-export function Icon({ name, size = 16, spin, label, style }: { name: keyof typeof paths | string; size?: number; spin?: boolean; label?: string; style?: React.CSSProperties }) {
+export function Icon({ name, size = 16, spin, label, style, className }: { name: keyof typeof paths | string; size?: number; spin?: boolean; label?: string; style?: React.CSSProperties; className?: string }) {
+  const cls = [spin ? 'icon spin' : 'icon', className].filter(Boolean).join(' ')
   return (
-    <svg className={spin ? 'icon spin' : 'icon'} style={style} width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    <svg className={cls} style={style} width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor"
       strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden={label ? undefined : true} role={label ? 'img' : undefined} aria-label={label}>
       {paths[name]}
     </svg>

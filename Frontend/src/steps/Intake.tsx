@@ -471,20 +471,20 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
           </div>
         </div>
 
-        {/* Hover HUD Banner ("if hovered Shows") */}
-        <div className="av-hover-hud" role="tooltip">
-          <div className="av-hover-hud-head">
+        {/* Hover Popover ("if hovered Shows") */}
+        <div className="av-hover-popover" role="tooltip">
+          <div className="av-hover-popover-head">
             <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
               <Icon name="shield" size={12} />
               <strong>BuLLSav Twin Engine: Zero-Trust Quarantine Sandbox</strong>
             </div>
             <span className="xs font-mono tone-ok">Unanimous 2/2 Consensus Required</span>
           </div>
-          <div className="av-hover-hud-branches">
+          <div className="av-hover-popover-branches">
             <div className="av-hover-branch">
               <span className="branch-dot branch-dot-clam" />
               <div className="branch-info">
-                <span className="branch-title">🌿 ClamAV Core v1.4</span>
+                <span className="branch-title">ClamAV Signature Engine (v1.4)</span>
                 <span className="branch-sub">MD5/SHA-256 hash threat lookup, static signatures &amp; macro AST</span>
               </div>
               <span className="badge sm badge-ok">0 CVEs</span>
@@ -492,14 +492,14 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
             <div className="av-hover-branch">
               <span className="branch-dot branch-dot-repel" />
               <div className="branch-info">
-                <span className="branch-title">🌿 Repel Behavioral Shield</span>
+                <span className="branch-title">Repel Heuristic Shield</span>
                 <span className="branch-sub">Adversarial prompt injection repulsion, heuristic guardrails &amp; traps</span>
               </div>
               <span className="badge sm badge-ok">0 Exploits</span>
             </div>
           </div>
-          <div className="av-hover-hud-foot">
-            <span>💡 Click anywhere on the strip or [Inspect] to view the complete pipeline graph &amp; consensus tree</span>
+          <div className="av-hover-popover-foot">
+            <span>Click to inspect full security pipeline &amp; consensus tree</span>
           </div>
         </div>
       </div>
@@ -691,43 +691,41 @@ function SecurityInspectionModal({
 }
 
 function ReadinessCircularGauge({ pct, total }: { pct: number; total: number }) {
-  const r = 30
-  const c = 38
-  const circum = 2 * Math.PI * r // ~188.5
+  const r = 26
+  const c = 32
+  const circum = 2 * Math.PI * r // ~163.36
   const offset = circum * (1 - Math.min(100, Math.max(0, pct)) / 100)
   const isHigh = pct >= 80
-  const isMid = pct >= 50
 
   return (
-    <div className="hud-readiness-gauge">
-      <div className="hud-gauge-visual">
-        <svg width="76" height="76" viewBox="0 0 76 76" className="hud-gauge-svg">
-          <circle cx={c} cy={c} r={r} className="hud-gauge-bg" />
+    <div className="enterprise-readiness-box">
+      <div className="gauge-circle-wrap">
+        <svg width="64" height="64" viewBox="0 0 64 64" className="enterprise-gauge-svg">
+          <circle cx={c} cy={c} r={r} className="gauge-track" />
           <circle
             cx={c}
             cy={c}
             r={r}
-            className={`hud-gauge-progress ${isHigh ? 'is-high' : isMid ? 'is-mid' : 'is-low'}`}
+            className={`gauge-bar ${isHigh ? 'is-pass' : 'is-active'}`}
             style={{
               strokeDasharray: circum,
               strokeDashoffset: offset,
             }}
           />
         </svg>
-        <div className="hud-gauge-center">
-          <span className="hud-gauge-pct font-mono">{pct}%</span>
-          <span className="hud-gauge-sub font-mono">READY</span>
+        <div className="gauge-metric-center">
+          <span className="gauge-pct-val">{pct}%</span>
         </div>
       </div>
-      <div className="hud-gauge-meta">
-        <strong className="hud-gauge-title font-mono">
-          {pct >= 80 ? 'PRE-FLIGHT READY' : total > 0 ? 'ASSESSING READINESS' : 'AWAITING DOCUMENTS'}
+      <div className="gauge-meta-content">
+        <strong className="gauge-status-title">
+          {pct >= 80 ? 'Pre-Flight Ready' : total > 0 ? 'Evaluating Intake Batch' : 'Awaiting Documentation'}
         </strong>
         <p className="xs muted" style={{ margin: '2px 0 0 0', lineHeight: 1.35 }}>
           {pct >= 80
-            ? 'Sufficiency threshold met (≥80%). Pre-Flight verification gate unlocked.'
+            ? 'Batch meets 80% sufficiency threshold for automated graph extraction.'
             : total > 0
-            ? 'Staged documents are being evaluated for graph grounding.'
+            ? 'Staged documents are being verified for RAG grounding.'
             : 'Add documents and objectives to assess sufficiency and coverage.'}
         </p>
       </div>
@@ -1036,28 +1034,28 @@ export function Intake({ snap, info }: StepProps) {
         {/* PANE 1: LEFT PANE - CONTEXT & SOURCE DOCUMENTS (Collapsible Timeline) */}
         <aside className={`intake-pane-left ${leftCollapsed ? 'is-collapsed' : ''}`}>
           {leftCollapsed ? (
-            /* Sleek Collapsed HUD Mini-Rail */
-            <div className="hud-mini-rail">
+            /* Sleek Collapsed Enterprise Mini-Rail */
+            <div className="enterprise-mini-rail">
               <button
                 type="button"
-                className="hud-mini-rail-toggle"
+                className="mini-rail-toggle"
                 onClick={() => setLeftCollapsed(false)}
                 title="Expand intake steps & staged documents"
               >
                 <Icon name="chevron" size={12} />
               </button>
-              <div className="hud-mini-rail-nodes">
-                <span className={`hud-mini-node ${total > 0 && fdeGoals.trim() ? 'is-ok' : 'is-active'}`} title="1.1 Objective & documents">
-                  {total > 0 && fdeGoals.trim() ? '✓' : '1.1'}
+              <div className="mini-rail-nodes">
+                <span className={`mini-rail-node ${total > 0 && fdeGoals.trim() ? 'is-ok' : 'is-active'}`} title="1.1 Objective & documents">
+                  {total > 0 && fdeGoals.trim() ? <Icon name="check" size={10} /> : '1.1'}
                 </span>
-                <span className={`hud-mini-node ${released === total && total > 0 ? 'is-ok' : pending.length > 0 ? 'is-active' : ''}`} title="1.2 BuLLSav Twin Engine">
-                  {released === total && total > 0 ? '✓' : '1.2'}
+                <span className={`mini-rail-node ${released === total && total > 0 ? 'is-ok' : pending.length > 0 ? 'is-active' : ''}`} title="1.2 BuLLSav Twin Engine">
+                  {released === total && total > 0 ? <Icon name="check" size={10} /> : '1.2'}
                 </span>
-                <span className={`hud-mini-node ${ingested ? 'is-ok' : ''}`} title="1.3 RAG hand-off">
-                  {ingested ? '✓' : '1.3'}
+                <span className={`mini-rail-node ${ingested ? 'is-ok' : ''}`} title="1.3 RAG hand-off">
+                  {ingested ? <Icon name="check" size={10} /> : '1.3'}
                 </span>
               </div>
-              <div className="hud-mini-rail-badge" title={`${total} staged documents`}>
+              <div className="mini-rail-badge" title={`${total} staged documents`}>
                 <Icon name="file" size={11} />
                 <span className="font-mono">{total}</span>
               </div>
@@ -1068,8 +1066,8 @@ export function Intake({ snap, info }: StepProps) {
               {/* Card 1: INTAKE PIPELINE */}
               <div className="wb-card">
                 <div className="wb-card-head">
-                  <span className="xs muted font-mono" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    INTAKE PIPELINE
+                  <span className="xs muted font-mono" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    INTAKE WORKFLOW
                   </span>
                   <button
                     type="button"
@@ -1083,28 +1081,28 @@ export function Intake({ snap, info }: StepProps) {
                   </button>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text)' }}>New intake</h3>
+                  <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 2px 0', color: 'var(--text)' }}>Workflow Stages</h3>
                   <span className="xs muted">{total > 0 ? `${total} document${total === 1 ? '' : 's'} staged` : 'No documents added yet'}</span>
                 </div>
 
                 {/* Vertical Timeline */}
-                <ol className="wb-stepper hud-vertical-timeline">
-                  <li className={`wb-step hud-v-step ${total > 0 && fdeGoals.trim() ? 'is-done' : 'is-active'}`}>
-                    <span className="wb-step-num hud-v-node">{total > 0 && fdeGoals.trim() ? '✓' : '1'}</span>
+                <ol className="wb-stepper enterprise-v-timeline">
+                  <li className={`wb-step enterprise-v-step ${total > 0 && fdeGoals.trim() ? 'is-done' : 'is-active'}`}>
+                    <span className="wb-step-num enterprise-v-node">{total > 0 && fdeGoals.trim() ? <Icon name="check" size={10} /> : '1'}</span>
                     <div>
                       <div className="wb-step-label">Objective &amp; documents</div>
                       <div className="wb-step-sub">{total > 0 ? `${total} files selected` : 'Define scope & files'}</div>
                     </div>
                   </li>
-                  <li className={`wb-step hud-v-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
-                    <span className="wb-step-num hud-v-node">{released === total && total > 0 ? '✓' : '2'}</span>
+                  <li className={`wb-step enterprise-v-step ${released === total && total > 0 ? 'is-done' : pending.length > 0 ? 'is-active' : ''}`}>
+                    <span className="wb-step-num enterprise-v-node">{released === total && total > 0 ? <Icon name="check" size={10} /> : '2'}</span>
                     <div>
                       <div className="wb-step-label">BuLLSav Twin Engine</div>
                       <div className="wb-step-sub">{released === total && total > 0 ? 'All files clean' : pending.length > 0 ? 'Scanning...' : 'ClamAV + Repel consensus'}</div>
                     </div>
                   </li>
-                  <li className={`wb-step hud-v-step ${ingested ? 'is-done' : ''}`}>
-                    <span className="wb-step-num hud-v-node">{ingested ? '✓' : '3'}</span>
+                  <li className={`wb-step enterprise-v-step ${ingested ? 'is-done' : ''}`}>
+                    <span className="wb-step-num enterprise-v-node">{ingested ? <Icon name="check" size={10} /> : '3'}</span>
                     <div>
                       <div className="wb-step-label">RAG hand-off</div>
                       <div className="wb-step-sub">{ingested ? 'Context extracted' : 'Cognee Graph & OKF'}</div>
@@ -1199,11 +1197,8 @@ export function Intake({ snap, info }: StepProps) {
           {/* Header row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div>
-              <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Intake assistant</h3>
-                <span className="hud-console-badge font-mono">WORKSPACE CORE</span>
-              </div>
-              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Describe the job. Your documents and checks stay in view.</p>
+              <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: 'var(--text)' }}>Intake Assistant</h3>
+              <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Define intake scope and upload documents. Security verification and readiness checks update in real time.</p>
             </div>
             <button
               type="button"
@@ -1216,22 +1211,19 @@ export function Intake({ snap, info }: StepProps) {
             </button>
           </div>
 
-          {/* Central Intelligent Intake Command Bar (HUD Console) */}
-          <div className="wb-card intake-command-bar hud-command-console">
+          {/* Central Intelligent Intake Command Bar */}
+          <div className="wb-card intake-command-bar enterprise-command-card">
             <div className="intake-command-header">
               <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
-                <div className="command-bar-icon-box hud-terminal-glow">
-                  <Icon name="bolt" size={15} />
+                <div className="command-bar-icon-box">
+                  <Icon name="bolt" size={14} />
                 </div>
                 <div>
-                  <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                      Intelligent Intake &amp; Objective Command
-                    </h4>
-                    <span className="hud-directive-pill font-mono">FDE DIRECTIVE</span>
-                  </div>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 600, margin: 0, color: 'var(--text)' }}>
+                    Intake Directives &amp; Objective
+                  </h4>
                   <span className="xs muted">
-                    Set scope &amp; constraints · Speak, type, or drop files anywhere on screen
+                    Define technical scope, tolerances, and constraints for downstream RAG grounding
                   </span>
                 </div>
               </div>
@@ -1246,10 +1238,10 @@ export function Intake({ snap, info }: StepProps) {
                     void run('Load fixture', async () => {})
                     toast('Loaded Meridian Aerospace RFQ package (21 files). BuLLSav scanning triggered.', 'success')
                   }}
-                  title="1-click load pre-built industrial RFQ batch with 21 aerospace documents"
+                  title="Load pre-built industrial RFQ batch with 21 aerospace documents"
                 >
                   <Icon name="bolt" size={11} />
-                  <span>⚡ Load Industrial RFQ Batch (21 Docs)</span>
+                  <span>Load Sample Batch (21 Docs)</span>
                 </button>
               )}
             </div>
@@ -1258,7 +1250,7 @@ export function Intake({ snap, info }: StepProps) {
             <div className="intake-command-input-container">
               <textarea
                 id="fde-obj-input"
-                className="intake-command-textarea hud-terminal-textarea"
+                className="intake-command-textarea enterprise-textarea"
                 rows={2}
                 value={goals}
                 onChange={e => saveGoals(e.target.value)}
@@ -1270,13 +1262,13 @@ export function Intake({ snap, info }: StepProps) {
                 <div className="intake-command-left-actions">
                   <button
                     type="button"
-                    className="btn btn-primary sm intake-add-btn hud-primary-glow"
+                    className="btn btn-primary sm intake-add-btn"
                     disabled={!!closed}
                     onClick={() => setBulk(true)}
                     title="Open Ingest Assistant: Select files, whole folders with nested ZIPs, archives, or bulk enterprise packages"
                   >
                     <Icon name="plus" size={13} />
-                    <span>Add / Ingest Files</span>
+                    <span>Add Documents</span>
                   </button>
 
                   {/* Voice Dictation Button */}
@@ -1469,9 +1461,9 @@ export function Intake({ snap, info }: StepProps) {
         </section>
 
         {/* PANE 3: RIGHT PANE - STICKY READINESS & BULLSAV CORE */}
-        <aside className="intake-pane-right hud-sticky-rail" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <aside className="intake-pane-right enterprise-sticky-rail" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Card 1: INTAKE READINESS WITH CIRCULAR SVG GAUGE */}
-          <div className="wb-card hud-readiness-card">
+          <div className="wb-card enterprise-readiness-card">
             <div className="wb-card-head">
               <h4 className="wb-card-title">Intake readiness</h4>
               <span className="badge sm font-mono">{total} docs</span>

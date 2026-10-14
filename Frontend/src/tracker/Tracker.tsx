@@ -51,26 +51,20 @@ function TrackerTask({ item, open, currentScreen, onToggle, setRef }: { item: Tr
       id={`tracker-stage-${item.id}`}
       aria-expanded={open}
       aria-controls={`tracker-panel-${item.id}`}
-      className={`tracker-pill hud-stage-node s-${status} ${open ? 'is-open' : ''} ${isCurrent ? 'is-active' : ''}`}
+      className={`tracker-step-item s-${status} ${open ? 'is-open' : ''} ${isCurrent ? 'is-active' : ''}`}
       onClick={onToggle}
       aria-current={isCurrent ? 'location' : undefined}
-      title={`Stage ${item.id}: ${item.label} (${done}/${screens.length} screens done)`}
+      title={`Stage ${item.id}: ${item.label} (${done}/${screens.length} screens complete)`}
     >
-      <div className="hud-node-edge" aria-hidden />
-      <span className={`tracker-pill-num hud-node-num ${isDone ? 'done' : isCurrent ? 'active' : ''}`}>
-        {isDone ? <Icon name="check" size={10} /> : `0${item.id}`}
+      <span className={`tracker-step-dot ${isDone ? 'is-done' : isCurrent ? 'is-active' : 'is-pending'}`}>
+        {isDone ? <Icon name="check" size={10} /> : item.id}
       </span>
-      <span className="tracker-pill-label hud-node-label">{item.shortLabel}</span>
-      {isCurrent ? (
-        <span className="tracker-pill-badge hud-node-badge active">{currentScreen}</span>
-      ) : isDone ? (
-        <span className="tracker-pill-badge hud-node-badge done">✓ Done</span>
-      ) : (
-        <span className="tracker-pill-badge hud-node-badge count">{done}/{screens.length}</span>
-      )}
-      <span className={`tracker-pill-chev hud-node-chev ${open ? 'up' : ''}`} aria-hidden>
-        <Icon name="down" size={9} />
-      </span>
+      <div className="tracker-step-text">
+        <span className="tracker-step-label">{item.shortLabel}</span>
+        <span className="tracker-step-meta">
+          {isDone ? 'Completed' : isCurrent ? `${currentScreen} active` : `${done}/${screens.length}`}
+        </span>
+      </div>
     </button>
   )
 }
@@ -82,7 +76,7 @@ function StatusMenu({ item }: { item: TrackerItem }) {
   const prev = useTrackerStore(t => t.previous.includes(item.id))
   const pinned = useTrackerStore(t => t.basis[item.id] !== undefined && t.basis[item.id] === t.evidence[item.id])
   return (
-    <div className="status-menu hud-status-menu">
+    <div className="status-menu enterprise-status-menu">
       <div className="sm-head">
         <span className="sm-title"><span className="chip-num">{item.id}</span> {item.label}</span>
       </div>
@@ -108,13 +102,10 @@ function TrackerSubtaskRow({ stage, currentScreen, onClose }: { stage: TrackerIt
   const picked = TRACKER_ITEMS.find(i => i.id === selected && i.parentId === stage.id)
 
   return (
-    <section id={`tracker-panel-${stage.id}`} className="tracker-panel hud-subroutine-strip" aria-labelledby={`tracker-stage-${stage.id}`}>
-      <div className="hud-subroutine-inner">
-        <div className="hud-subroutine-tag">
-          <span className="hud-tag-pulse" />
-          <span className="hud-tag-text font-mono">STAGE 0{stage.id} // SUBROUTINES</span>
-        </div>
-        <div className="tracker-chips hud-subroutine-chips">
+    <nav id={`tracker-panel-${stage.id}`} className="enterprise-subnav" aria-label={`Stage ${stage.id} procedures`}>
+      <div className="subnav-container">
+        <span className="subnav-stage-tag">Stage {stage.id}:</span>
+        <div className="subnav-tabs">
           {subtasksOf(stage.id).map(s => {
             const st = statuses[s.id] ?? 'not_started'
             const prev = previous.includes(s.id)
@@ -126,39 +117,32 @@ function TrackerSubtaskRow({ stage, currentScreen, onClose }: { stage: TrackerIt
               <button
                 key={s.id}
                 data-screen={s.id}
-                className={`chip hud-sub-chip s-${st} ${prev ? 'prev' : ''} ${isSelected ? 'on is-selected' : ''} ${isCurrent ? 'current is-current' : ''}`}
+                className={`subnav-tab-item s-${st} ${prev ? 'prev' : ''} ${isSelected ? 'is-selected' : ''} ${isCurrent ? 'is-active' : ''}`}
                 aria-pressed={isSelected}
                 aria-current={isCurrent ? 'page' : undefined}
                 title={`${STATUS_LABEL[st]}${prev ? ' (from previous run)' : ''}. ${DONE_RULE[s.id]}`}
-                aria-label={`${s.id} ${s.label}. ${prev ? 'From previous run' : STATUS_LABEL[st]}. ${DONE_RULE[s.id]}`}
                 onClick={() => {
                   setTracker({ selected: isSelected ? null : s.id })
                   goScreen(s.id)
                 }}
               >
-                <span className="chip-num hud-sub-num" aria-hidden>{s.id}</span>
-                <span className="chip-label hud-sub-label" aria-hidden>{s.label}</span>
-                {isDone ? (
-                  <span className="hud-sub-dot is-done"><Icon name="check" size={8} /></span>
-                ) : isCurrent ? (
-                  <span className="hud-sub-dot is-active" />
-                ) : (
-                  <StatusGlyph status={st} />
-                )}
+                <span className="subnav-tab-num">{s.id}</span>
+                <span className="subnav-tab-label">{s.label}</span>
+                {isDone && <Icon name="check" size={10} className="subnav-tab-check" />}
               </button>
             )
           })}
         </div>
-        <button className="btn btn-ghost sm hud-sub-close" onClick={onClose} title="Hide subroutines">
+        <button type="button" className="subnav-close-btn" onClick={onClose} title="Dismiss sub-navigation">
           <Icon name="x" size={11} />
         </button>
       </div>
       {picked && (
-        <div className="hud-status-popover">
+        <div className="subnav-status-drawer">
           <StatusMenu item={picked} />
         </div>
       )}
-    </section>
+    </nav>
   )
 }
 
@@ -196,37 +180,27 @@ export function TrackerStrip() {
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 'Escape' || !openTask) return
     if (selected) {
-      document.querySelector<HTMLElement>(`.chip[data-screen="${selected}"]`)?.focus()
+      document.querySelector<HTMLElement>(`.subnav-tab-item[data-screen="${selected}"]`)?.focus()
       setTracker({ selected: null })
     } else close()
   }
 
-  // Calculate timeline progress fill
-  const stageNum = parseInt(currentStage, 10) || 1
-  const trackFillPct = ((stageNum - 1) / (TASKS.length - 1)) * 100
-
   return (
-    <div className="tracker hud-tracker" onKeyDown={onKey}>
-      <div className="tracker-line hud-tracker-line">
-        <div className="hud-timeline-rail">
-          {/* Continuous HUD Track Line running behind all stage nodes */}
-          <div className="hud-track-line-bg">
-            <div className="hud-track-line-fill" style={{ width: `${trackFillPct}%` }} />
-          </div>
-
-          <nav className="tracker-strip hud-stages-row" aria-label="BAM stages">
-            {TASKS.map(t => (
-              <span key={t.id} className="tracker-cell hud-stage-cell">
-                <TrackerTask
-                  item={t}
-                  open={activeStageId === t.id}
-                  currentScreen={currentStage === t.id ? currentScreen : undefined}
-                  onToggle={() => toggle(t.id)}
-                  setRef={el => { triggers.current[t.id] = el }}
-                />
-              </span>
-            ))}
-          </nav>
+    <div className="tracker enterprise-tracker-root" onKeyDown={onKey}>
+      <div className="enterprise-tracker-bar">
+        <div className="enterprise-stepper-rail">
+          {TASKS.map((t, idx) => (
+            <div key={t.id} className="enterprise-step-wrapper">
+              {idx > 0 && <div className="enterprise-connector" />}
+              <TrackerTask
+                item={t}
+                open={activeStageId === t.id}
+                currentScreen={currentStage === t.id ? currentScreen : undefined}
+                onToggle={() => toggle(t.id)}
+                setRef={el => { triggers.current[t.id] = el }}
+              />
+            </div>
+          ))}
         </div>
         <Toasts />
       </div>
