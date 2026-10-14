@@ -4,6 +4,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
 import type { Sow } from '../api/types'
 import { diffBlocks, editCount, type Block, type DiffCounts } from '../lib/sowDiff'
 import { Time } from './ui'
@@ -24,7 +25,18 @@ export const Passage = Extension.create({
   }],
 })
 
-export const sowExtensions = [StarterKit, Passage]
+export const sowExtensions = [
+  StarterKit,
+  Passage,
+  Image.configure({
+    inline: false,
+    allowBase64: true,
+    HTMLAttributes: {
+      class: 'sow-doc-image',
+      style: 'max-width: 100%; border-radius: 6px; border: 1px solid var(--border); margin: 12px 0; display: block; cursor: pointer;',
+    },
+  }),
+]
 
 // Read-only rendering through the same schema (sanitises whatever the backend returns).
 export function ReadonlySow({ html, highlight }: { html: string; highlight?: string }) {

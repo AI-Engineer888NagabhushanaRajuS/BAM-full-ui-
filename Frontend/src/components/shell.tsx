@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUppyState } from '@uppy/react'
 import type { Snapshot } from '../api/types'
-import { dismissToast, openSettings, setUi, toast, uppy, useUi } from '../lib/store'
+import { dismissToast, openSettings, openPreflight, openOpenConnector, closeOpenConnector, setUi, toast, uppy, useUi } from '../lib/store'
 import { goScreen, navigate, usePath } from '../lib/route'
 import { TASKS, screenByPath, screenLabel } from '../tracker/trackerConfig.ts'
 import { Icon, fmtFull, fmtTime } from './ui'
 import { AppSettingsModal } from './AppSettingsModal'
 import { OpenConnectorModal } from './OpenConnectorModal'
+import { OnboardingModal } from './OnboardingModal'
+import { useAuth } from '../lib/auth'
+import { useWorkspace } from '../lib/workspace'
+import { getPreflightSufficiency } from '../rag/CogneePreflightCockpit'
 
 export const useUploadsInFlight = () =>
   useUppyState(uppy, s => Object.values(s.files).filter(f => f.progress.uploadStarted && !f.progress.uploadComplete && !f.error).length)
@@ -15,20 +19,26 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
   const stage = TASKS.find(t => t.id === screenId?.split('.')[0])
   const theme = useUi(s => s.theme)
   const env = useUi(s => s.env)
+  const connectorOpen = useUi(s => !!s.openConnectorModalOpen)
+  const { user } = useAuth()
+  const { workspace, project } = useWorkspace()
   const [showConnector, setShowConnector] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   return (
     <header className="topbar">
       <div className="brand">
-        <div className="brand-logo-group" onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="logo" aria-hidden>B</span>
+        <div className="brand-logo-group" onClick={() => setShowOnboarding(true)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="logo" aria-hidden title="Click to open BAM Workspace Onboarding & Projects">B</span>
           <span className="brand-title" style={{ fontWeight: '700', fontSize: '14.5px', color: 'var(--text)', letterSpacing: '-0.02em' }}>
-            BuLLM <span style={{ fontWeight: '400', color: 'var(--muted)', fontSize: '13px' }}>/ Client workspace</span>
+            BuLLM <span style={{ fontWeight: '500', color: 'var(--accent)', fontSize: '12.5px', background: 'var(--accent-soft)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--accent)' }}>/ {workspace.name}</span>
           </span>
         </div>
-        {/* Each crumb can shrink and ellipsize; the full text is in its tooltip. The screen name keeps priority. */}
+        {/* Interactive Workspace & Project Breadcrumbs */}
         <nav aria-label="Breadcrumb" className="crumbs">
-          <button className="link crumb-link crumb" onClick={() => navigate('/')} title="Projects">Projects</button>
+          <button className="link crumb-link crumb" onClick={() => setShowOnboarding(true)} title={`Active Project: ${project.name} [${project.code}]. Click to switch.`}>
+            <strong>{project.code}</strong>
+          </button>
           {stage && <><Icon name="chevron" size={12} /><span className="crumb" title={`Stage ${stage.id}: ${stage.label}`}>{stage.id} · {stage.label}</span></>}
           {screenId && <><Icon name="chevron" size={12} /><strong className="crumb crumb-current" title={screenLabel(screenId)} aria-current="page">{screenLabel(screenId)}</strong></>}
         </nav>
@@ -42,6 +52,37 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
         }}>
           Simulation mode
         </span>
+
+        {/* Topbar Pre-Flight Gate Fast-Launcher Pill */}
+        {(() => {
+          const preflight = getPreflightSufficiency()
+          const pass = preflight.isUnlocked
+          return (
+            <button
+              type="button"
+              className="badge sm preflight-gate-badge"
+              onClick={openPreflight}
+              title={`Pre-Flight Verification Gate: ${preflight.passRate}% (${preflight.passCount}/${preflight.totalCount} passed). Click to open Pre-Flight Cockpit.`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                background: pass ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)',
+                border: `1px solid ${pass ? 'color-mix(in srgb, #10b981 45%, transparent)' : 'color-mix(in srgb, var(--accent) 40%, transparent)'}`,
+                color: pass ? '#10b981' : 'var(--accent)',
+                fontSize: '11px',
+                fontWeight: '600',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>{pass ? '🛡️' : '⚡'}</span>
+              <span>Gate: {preflight.passRate}% {pass ? 'PASS' : 'LOCKED'}</span>
+            </button>
+          )
+        })()}
 
         {/* Backend Sync Indicator */}
         <span className={`sync ${offline ? 'tone-err' : 'tone-muted'}`} role="status" title={syncedAt ? `Last backend sync ${fmtFull(new Date(syncedAt).toISOString())}` : undefined}>
@@ -90,29 +131,47 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
         </button>
 
         {/* Open Connector User Profile Chip */}
-        <button
-          type="button"
-          className="user-profile-chip"
-          onClick={() => setShowConnector(true)}
-          title="Open Connector: Clerk, GitHub & Google SSO session"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '3px 8px 3px 4px',
-            borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--surface-2)',
-            cursor: 'pointer', color: 'var(--text)', transition: 'all 0.15s ease'
-          }}
-        >
-          <div style={{
-            width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-            color: '#fff', display: 'grid', placeItems: 'center', fontWeight: '700', fontSize: '11px'
-          }}>
-            AM
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', lineHeight: 1.1 }}>
-            <span style={{ fontSize: '11.5px', fontWeight: '600' }}>Alex Mercer</span>
-            <span className="xs muted" style={{ fontSize: '9.5px' }}>Admin · Clerk</span>
-          </div>
-          <Icon name="chevron" size={10} />
-        </button>
+        {user ? (
+          <button
+            type="button"
+            className="user-profile-chip"
+            onClick={() => setShowConnector(true)}
+            title={`Active: ${user.name} (${user.role}) via ${user.provider}. Click to manage Open Connector SSO sessions.`}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '3px 8px 3px 4px',
+              borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--surface-2)',
+              cursor: 'pointer', color: 'var(--text)', transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '50%', background: user.avatarGradient,
+              color: '#fff', display: 'grid', placeItems: 'center', fontWeight: '700', fontSize: '11px'
+            }}>
+              {user.initials}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', lineHeight: 1.1 }}>
+              <span style={{ fontSize: '11.5px', fontWeight: '600' }}>{user.name}</span>
+              <span className="xs muted" style={{ fontSize: '9.5px' }}>{user.role} · {user.provider}</span>
+            </div>
+            <Icon name="chevron" size={10} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn xs"
+            onClick={() => setShowConnector(true)}
+            title="Sign in with Clerk, Google, or GitHub SSO"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              borderRadius: '20px', padding: '4px 10px',
+              border: '1px solid var(--primary)', background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+              color: 'var(--text)', fontWeight: '600', cursor: 'pointer'
+            }}
+          >
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+            <span>Sign In</span>
+          </button>
+        )}
 
         {/* Light / Dark Mode Toggle */}
         <button className="icon-btn sm" aria-pressed={theme === 'light'} onClick={() => setUi({ theme: theme === 'dark' ? 'light' : 'dark' })}
@@ -126,7 +185,8 @@ export function TopBar({ syncedAt, offline, screenId }: { snap?: Snapshot; synce
         </button>
       </div>
       <AppSettingsModal />
-      <OpenConnectorModal open={showConnector} onClose={() => setShowConnector(false)} />
+      <OpenConnectorModal open={showConnector || connectorOpen} onClose={() => { setShowConnector(false); closeOpenConnector(); }} />
+      <OnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </header>
   )
 }

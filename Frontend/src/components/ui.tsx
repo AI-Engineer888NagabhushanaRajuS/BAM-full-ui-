@@ -41,9 +41,9 @@ const paths: Record<string, ReactNode> = {
   grid: <><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" /><rect x="9" y="2.5" width="4.5" height="4.5" rx="1" /><rect x="2.5" y="9" width="4.5" height="4.5" rx="1" /><rect x="9" y="9" width="4.5" height="4.5" rx="1" /></>,
 }
 
-export function Icon({ name, size = 16, spin, label }: { name: keyof typeof paths | string; size?: number; spin?: boolean; label?: string }) {
+export function Icon({ name, size = 16, spin, label, style }: { name: keyof typeof paths | string; size?: number; spin?: boolean; label?: string; style?: React.CSSProperties }) {
   return (
-    <svg className={spin ? 'icon spin' : 'icon'} width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    <svg className={spin ? 'icon spin' : 'icon'} style={style} width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor"
       strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden={label ? undefined : true} role={label ? 'img' : undefined} aria-label={label}>
       {paths[name]}
     </svg>

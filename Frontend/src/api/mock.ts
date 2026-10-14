@@ -270,28 +270,44 @@ export function createMockApi({ speed = 1 } = {}): BamApi {
       }
     } catch {}
 
+    // Determine client name and workflow domain
+    let clientName = 'Enterprise Software Systems'
+    const hasCad = releasedFiles.some(f => /\.(step|stp|cad)$/i.test(f) || /bracket|housing/i.test(f))
+    if (hasCad) {
+      clientName = 'Meridian Aerospace & Defense'
+    } else {
+      try {
+        const authRaw = localStorage.getItem('bam-auth-user-v1')
+        if (authRaw) {
+          const authUser = JSON.parse(authRaw)
+          if (authUser?.organization) clientName = `${authUser.organization} Client Workspace`
+        }
+      } catch {}
+    }
+
     const html = produceDynamicSowHtml({
       fdeGoals,
       releasedFiles,
       verifiedChecks,
       notes: s.sowNotes,
+      client: clientName,
     })
 
     s.sow = {
       version, generatedVersion: version, updatedAt: now(), status: 'draft', html, generatedHtml: html,
       previous: prev && { version: prev.version, html: prev.html, at: prev.updatedAt },
-      meta: { sowId: 'SOW-2026-0147', client: 'Meridian Aerospace & Defense', lengthMode: 'Custom (short form)', sources: s.uploads.filter(isReleased).length },
+      meta: { sowId: 'SOW-2026-0147', client: clientName, lengthMode: 'Custom (short form)', sources: s.uploads.filter(isReleased).length },
       invalidated: prev?.approval ? { version: prev.approval.version, at: now(), reason } : prev?.invalidated,
       changeRequest: prev?.changeRequest,
       contextRunId: contextRunId ?? prev?.contextRunId,
     }
-    void evaluateSow()
+    void evaluateSow(verifiedChecks)
     return version
   }
 
   // Accuracy evaluation for the current version: real rule checks, then the Laya judge (server/laya-judge).
   // When Laya is not reachable the judge metrics are simulated from the rule results, and the card says so.
-  async function evaluateSow() {
+  async function evaluateSow(verifiedChecks: Array<{ question: string; answer: string }> = []) {
     const sow = s.sow
     if (!sow) return
     const version = sow.version
@@ -302,8 +318,16 @@ export function createMockApi({ speed = 1 } = {}): BamApi {
     const { metrics, findings } = ruleChecks(html, validateField)
     let judged, judge = SOW_JUDGE, simulated = false, judgeNote: string
     try {
-      // Discovery facts from the RAG context: Cognee's entity relations ("A has_document B"), plus entity facts on the fixture.
-      const r = await layaJudge(html, contextFacts(ragPipeline.getState()))
+      // Build comprehensive discovery context facts from real uploaded files, verified checks, and graph:
+      const uploadedFileFacts = s.uploads.filter(isReleased).map(f => `Source package object: ${f.name} (verified, size: ${f.size} bytes)`)
+      const preflightFacts = verifiedChecks.map(c => `Verified requirement fact: ${c.question} -> ${c.answer}`)
+      const facts = [
+        ...uploadedFileFacts,
+        ...preflightFacts,
+        ...contextFacts(ragPipeline.getState()),
+      ]
+
+      const r = await layaJudge(html, facts)
       judged = JUDGE_CRITERIA.map(c => { const m = r.metrics.find(x => x.key === c.key)!; return { key: c.key, label: c.label, method: 'judge' as const, score: m.score, detail: `${c.rubric} ${m.detail}` } })
       findings.push(...r.findings.map(f => ({ requirement: f.requirement, passageId: reqPassage(f.requirement), field: 'Laya', text: f.text })))
       judgeNote = `${r.model} · ${r.inputTokens} tokens${r.ms ? ` · ${(r.ms / 1000).toFixed(1)} s` : ''}`
@@ -537,7 +561,7 @@ export function createMockApi({ speed = 1 } = {}): BamApi {
       const startedAt = now()
       u0.scanStartedAt = startedAt
       logScan(u0, 'started')
-      await sleep(1600)
+      await sleep(2400)
       const u = s.uploads.find(x => x.id === id)
       if (!u || u.scanStartedAt !== startedAt) return // removed or rescanned meanwhile
       finish(u)
@@ -610,6 +634,18 @@ export function createMockApi({ speed = 1 } = {}): BamApi {
       if (u.scan === 'blocked') s.quarantine.push(structuredClone(u))
       s.uploads = s.uploads.filter(x => x.id !== id)
       logScan(u, 'removed')
+    },
+    async resetAllUploads() {
+      assertActive(1)
+      await latency()
+      s.uploads = []
+      s.scanEvents = []
+      s.quarantine = []
+      s.ingestion = undefined
+      try {
+        localStorage.removeItem('bam-preflight-checks')
+        localStorage.setItem('bam_uploads_count', '0')
+      } catch {}
     },
     async retryScan(id) {
       assertActive(1)

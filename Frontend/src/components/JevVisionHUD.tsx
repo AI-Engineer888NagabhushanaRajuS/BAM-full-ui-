@@ -6,7 +6,7 @@ import {
   type JevModelInfo,
 } from '../api/sowEval'
 import { Icon, StatusPill } from './ui'
-import { openSettings } from '../lib/store'
+import { openSettings, openOpenRouterModal } from '../lib/store'
 
 export interface JevVisionHUDProps {
   mode?: 'intake' | 'rag' | 'sow'
@@ -67,10 +67,14 @@ export function JevVisionHUD({
   }, [sources.length, facts.length])
 
   const activeModelLabel =
-    activeModel === 'openrouter'
-      ? 'Gemini 2.5 Flash'
-      : activeModel === 'laya-onnx'
+    activeModel === 'laya-onnx'
       ? 'Laya ONNX'
+      : activeModel.includes(':free')
+      ? activeModel.split('/')[1]?.replace(':free', ' [Free]') || 'Free Model'
+      : activeModel.includes('/')
+      ? activeModel.split('/')[1]
+      : activeModel === 'openrouter'
+      ? 'Gemini 2.5 Flash'
       : 'Calibrated Engine'
 
   const verdict = evalResult?.verdict ?? 'sufficient'
@@ -117,11 +121,11 @@ export function JevVisionHUD({
           <button
             type="button"
             className="jev-model-badge"
-            onClick={openSettings}
-            title={`Active Engine: ${activeModelLabel}. Click to configure engines & keys in Settings.`}
+            onClick={openOpenRouterModal}
+            title={`Active Engine: ${activeModelLabel}. Click to switch between OpenRouter Free Models, Cloud Models, or Local Laya ONNX.`}
             aria-label="Engine Settings"
           >
-            <span className={`jev-model-dot ${activeModel === 'openrouter' ? 'cloud' : activeModel === 'laya-onnx' ? 'local' : 'sim'}`} />
+            <span className={`jev-model-dot ${activeModel.includes(':free') ? 'free' : activeModel.includes('/') || activeModel === 'openrouter' ? 'cloud' : activeModel === 'laya-onnx' ? 'local' : 'sim'}`} />
             <span className="jev-model-name">{activeModelLabel}</span>
             <Icon name="gear" size={11} />
           </button>

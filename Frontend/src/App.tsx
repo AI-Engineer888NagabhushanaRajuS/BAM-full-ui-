@@ -21,12 +21,15 @@ import { evidenceStatuses, previousRun } from './tracker/evidence.ts'
 import { setTracker } from './tracker/useTrackerStore'
 import { prerequisite } from './lib/prereq'
 import { getDrafts } from './lib/drafts'
+import { PreflightModal } from './rag/PreflightModal'
+import { OpenRouterKeyModal } from './components/OpenRouterKeyModal'
+import { closeOpenRouterModal } from './lib/store'
 
 export interface StepProps { snap: Snapshot; info: StepInfo }
 
 // Gated screens (a backend step locks them) rendered in the 3-pane shell, by screen ID.
 const PANES: Record<string, { Left: (p: StepProps) => React.ReactNode; Center: (p: StepProps) => React.ReactNode; Right: (p: StepProps) => React.ReactNode }> = {
-  '3.1': { Left: Step1.Sources, Center: Step1.Center, Right: Step1.Right },
+  '3.1': { Left: Step1.WorkflowPane, Center: Step1.Center, Right: Step1.ScopeAndEvidencePane },
   '3.2': Step2,
   '4.1': { Left: Step3.Left, Center: Step3.ActivitiesCenter, Right: Step3.Right },
   '4.3': { Left: Step3.Left, Center: Step3.CodeCenter, Right: Step3.Right },
@@ -95,6 +98,7 @@ function Workbench() {
   const path = usePath()
   const screen = screenByPath(path)
   const collapsed = useUi(s => s.collapsed)
+  const openRouterModalOpen = useUi(s => !!s.openRouterModalOpen)
   useEffect(() => { document.documentElement.dataset.theme = theme }, [theme])
   // The FDE/Staging selector sets the palette: FDE = blue (default), Staging = orange. Deployed or not.
   useEffect(() => { document.documentElement.dataset.env = env }, [env])
@@ -151,6 +155,8 @@ function Workbench() {
       <TopBar snap={snap} syncedAt={syncedAt} offline={!!error} screenId={screen.id} />
       <TrackerStrip />
       {body}
+      <PreflightModal />
+      <OpenRouterKeyModal open={openRouterModalOpen} onClose={closeOpenRouterModal} />
     </div>
   )
 }

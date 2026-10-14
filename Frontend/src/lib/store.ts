@@ -27,6 +27,9 @@ export interface Ui {
   reviewSkill?: string
   /** FDE Intake Objectives & Scope Directives (typed or Windows Voice-to-Text). */
   fdeGoals?: string
+  openRouterModalOpen?: boolean
+  preflightModalOpen?: boolean
+  openConnectorModalOpen?: boolean
 }
 
 // Manual progress tracker; lives in the same store the stepper navigates with.
@@ -50,17 +53,26 @@ const saved = (() => { try { return localStorage.getItem('bam-theme') } catch { 
 const savedPanes = (() => { try { return JSON.parse(localStorage.getItem('bam-panes') ?? 'null') as Ui['collapsed'] | null } catch { return null } })()
 const savedGoals = (() => { try { return localStorage.getItem('bam-fde-goals') ?? '' } catch { return '' } })()
 let state: Ui = {
-  theme: saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark',
+  theme: saved === 'light' ? 'light' : 'dark',
   env: 'FDE', settingsOpen: false, toasts: [],
   collapsed: { left: savedPanes?.left === true, right: savedPanes?.right === true },
   tracker: { statuses: initialStatuses(), basis: {}, evidence: initialStatuses(), previous: [], openTask: null, selected: null, loaded: false },
   rejected: [],
   fdeGoals: savedGoals,
+  openRouterModalOpen: false,
+  preflightModalOpen: false,
+  openConnectorModalOpen: false,
 }
 const subs = new Set<() => void>()
 
 export const openSettings = () => setUi({ settingsOpen: true })
 export const closeSettings = () => setUi({ settingsOpen: false })
+export const openOpenRouterModal = () => setUi({ openRouterModalOpen: true })
+export const closeOpenRouterModal = () => setUi({ openRouterModalOpen: false })
+export const openPreflight = () => setUi({ preflightModalOpen: true })
+export const closePreflight = () => setUi({ preflightModalOpen: false })
+export const openOpenConnector = () => setUi({ openConnectorModalOpen: true })
+export const closeOpenConnector = () => setUi({ openConnectorModalOpen: false })
 
 export function setUi(patch: Partial<Ui> | ((s: Ui) => Partial<Ui>)) {
   state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) }

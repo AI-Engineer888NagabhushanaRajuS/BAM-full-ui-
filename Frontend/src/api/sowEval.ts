@@ -285,11 +285,67 @@ export async function queryContextGraph(
     }
   }
 
+  if (/wtf|what is this|who are you|explain|overview|how does (this|it) work|help|what am i/i.test(question)) {
+    return {
+      question,
+      answer: `BuLLM BAM 0.2 Context Cockpit & Forward Deployed Engineering System: Ingested discovery artifacts (RFQ_Package_Meridian.pdf, BOM_RevC.xlsx, MPW-4421-bracket.step, email-thread.eml) have been verified through BuLL*Sav zero-trust quarantine and parsed into Cognee GraphRAG with 6 documents, 48 entities, and 5 Enterprise Masters (Organization, Rules, Agents, Skills, Filetypes). To unlock SOW generation, ensure context sufficiency reaches ≥ 80% across material specs, CAD tolerances, BOM changes, and commercial terms.`,
+      citations: [
+        { label: 'RFQ_Package_Meridian.pdf · §1 Executive Summary', s3: 's3://bam-intake/rfq-2026-0147/RFQ_Package_Meridian.pdf#summary' },
+        { label: 'Manufacturing_Masters_v0.2.xlsx · System Architecture', s3: 's3://bam-intake/masters/Architecture.xlsx' },
+      ],
+      confidence: 0.98,
+      passed: true,
+      model: 'client-fallback',
+    }
+  }
+
+  if (/oomol|connector|gateway|sap|digikey|mouser|github/i.test(question)) {
+    return {
+      question,
+      answer: 'OOMOL Universal Connectors Hub (oomol.com) integrates 8 enterprise connectors (SAP S/4HANA ERP, DigiKey Catalog, Mouser Component Pricing, GitHub FastMCP Repo, Google Drive, Postgres DBHub) behind a zero-secret token boundary. Connectors authenticate on-premise actions without exposing API secrets to LLM prompts.',
+      citations: [
+        { label: 'OOMOL_Connectors_Manifest.json · Action Registry', s3: 'https://oomol.com/docs/connectors' },
+        { label: 'Manufacturing_Masters_v0.2.xlsx · Agents (mcp://supplier-api-proxy:8080)', s3: 's3://bam-intake/masters/Agents.xlsx' },
+      ],
+      confidence: 0.97,
+      passed: true,
+      model: 'client-fallback',
+    }
+  }
+
+  if (/repel|guardrail|evasion|injection|pre-prompt/i.test(question)) {
+    return {
+      question,
+      answer: 'DigiBull REPEL (Pre-Prompt Guardrails) enforces deterministic enterprise policy locks prior to prompt ingestion. It neutralizes heuristic payload evasion, prompt injection tokens, and malicious workbook macros in quarantine before context embedding into GraphRAG.',
+      citations: [
+        { label: 'DigiBull_REPEL_Policy_v2.md · §Pre-Prompt Protection', s3: 'https://digibull.ai/ai-prompt-management-solutions/pre-prompt-guardrails/' },
+        { label: 'BuLL*Sav Security Architecture · Repel Engine', s3: 's3://bam-intake/security/repel_heuristics.json' },
+      ],
+      confidence: 0.98,
+      passed: true,
+      model: 'client-fallback',
+    }
+  }
+
+  if (/sri|skill.md|logic.json|bounded iteration/i.test(question)) {
+    return {
+      question,
+      answer: 'DigiBull SRI (Skill-Rules-Instructions) architecture binds natural-language operational contracts (SKILL.md) to deterministic JSON execution schemas (Logic.json). It executes bounded iteration loops (max_iterations: 3, budget: 5000ms) with PostgreSQL state logging and real-time N-Notification UI state dispatch.',
+      citations: [
+        { label: 'DigiBull_SRI_Framework_v1.md · §SKILL/Logic Spec', s3: 'https://digibull.ai/frameworks/sri/' },
+        { label: 'ISATVON_1.4_Loopy_Spec.md · Bounded Iterations', s3: 's3://bam-intake/specs/ISATVON_1.4.md' },
+      ],
+      confidence: 0.98,
+      passed: true,
+      model: 'client-fallback',
+    }
+  }
+
   return {
     question,
-    answer: `The context graph contains verified entities for "${question.slice(0, 45)}". Parameters are cross-referenced with ingested CAD/BOM files.`,
-    citations: [{ label: 'BOM_RevC.xlsx · line 2', s3: 's3://bam-intake/rfq-2026-0147/BOM_RevC.xlsx#line=2' }],
-    confidence: 0.89,
+    answer: `Query evaluated against Cognee GraphRAG: Ingested context contains 6 documents and 48 entities. Specification or term "${question.slice(0, 45)}" requires verification against Enterprise Masters.`,
+    citations: [{ label: 'RFQ_Package_Meridian.pdf · §General', s3: 's3://bam-intake/rfq-2026-0147/RFQ_Package_Meridian.pdf' }],
+    confidence: 0.85,
     passed: true,
     model: 'client-fallback',
   }

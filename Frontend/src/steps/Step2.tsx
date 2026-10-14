@@ -313,6 +313,7 @@ export function Center({ snap, info }: StepProps) {
   const [reopen, setReopen] = useState(false)
   const lockedEdit = () => toast('3.2 is read-only because the workflow has moved on. Use “Reopen 3.2 to edit” above the grid.', 'info', '3.2')
   const [showChanges, setShowChanges] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const { busy, run } = useAction()
   useEffect(() => { if (fetched) setRows(fetched) }, [fetched])
   // Edits against the extracted (model) values, counted the same way as the SOW.
@@ -357,8 +358,18 @@ export function Center({ snap, info }: StepProps) {
   </>
 
   return (
-    <Pane id="center-title" kicker="3.2 · Skill review" title="ISATVON skill workbench" className="center grid-pane"
-      actions={rows.length > 0 && <div className="stats" aria-label="Grid summary">
+    <Pane id="center-title" kicker="3.2 · Skill review" title="ISATVON skill workbench" className={`center grid-pane ${isFullscreen ? 'is-fullscreen' : ''}`}
+      actions={rows.length > 0 && <div className="stats" aria-label="Grid summary" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <button
+          type="button"
+          className={`btn ${isFullscreen ? 'btn-primary' : 'btn-secondary'} xs`}
+          onClick={() => setIsFullscreen(f => !f)}
+          title="Toggle Fullscreen Grid View"
+          style={{ height: '24px', padding: '0 8px', fontSize: '11px' }}
+        >
+          <Icon name="expand" size={11} />
+          <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+        </button>
         <span><strong>{agents}</strong> agents</span><span><strong>{rows.length}</strong> skills</span>
         <span className={withErrors ? 'tone-err' : ''}><Icon name={withErrors ? 'alert' : 'check'} size={12} /><strong>{withErrors}</strong> with errors</span>
         <span><Icon name="edit" size={12} /><strong>{editedCells}</strong> edited cells</span>

@@ -11,11 +11,13 @@ import { ACCEPTED_TYPES, AV_NAME, CHUNK_BYTES, chunkCount, MAX_BATCH_BYTES, MAX_
 import { autoPick, chunkNames, fit, ingestionBlock, scanView, triage, MAX_MULTI_BATCH_FILES, MAX_MULTI_BATCH_BYTES, type ScanAction, type Triage } from '../api/scanGate.ts'
 import type { StepProps } from '../App'
 import { useAction } from '../lib/data'
-import { setUi, toast, uploadFiles, uppy, useUi } from '../lib/store'
+import { setUi, toast, uploadFiles, uppy, useUi, openPreflight, openOpenConnector, openOpenRouterModal } from '../lib/store'
 import { goScreen } from '../lib/route'
 import { DEMO_RUN, demoControls } from '../lib/demo'
 import { isRunning, ragPipeline, useRag } from '../rag/ragPipeline.ts'
 import { buildOkfBundle } from '../rag/okf.ts'
+import { getPreflightSufficiency } from '../rag/CogneePreflightCockpit'
+import { getModelGateStatus } from '../lib/modelGate'
 import { useUploadsInFlight } from '../components/shell'
 import { Dialog, Empty, GateButton, Icon, StatusPill, Time, fmtBytes } from '../components/ui'
 
@@ -88,7 +90,15 @@ function ReviewDialog({ review, existing, onClose, onUpload }: { review?: Review
   const [shown, setShown] = useState<Review>()
   if (review !== shown) {
     setShown(review)
-    setChosen(new Set(t && fit(t.usable, existing, { allowMultiBatch: true }).ok ? t.usable : []))
+    if (t) {
+      if (fit(t.usable, existing, { allowMultiBatch: true }).ok) {
+        setChosen(new Set(t.usable))
+      } else {
+        setChosen(new Set(t.usable.slice(0, MAX_BATCH_FILES)))
+      }
+    } else {
+      setChosen(new Set())
+    }
   }
   if (!t || !review) return <Dialog open={false} title="" onClose={onClose} footer={null}>{null}</Dialog>
   const picked = t.usable.filter(f => chosen.has(f))
@@ -119,17 +129,41 @@ function ReviewDialog({ review, existing, onClose, onUpload }: { review?: Review
       </ol>
       {t.usable.length > 0 && (
         <div className="tile-panel" style={{ marginTop: '12px' }}>
-          <div className="tile-bar">
-            <button className="link sm" onClick={() => setChosen(new Set())}>Clear</button>
-            <strong className="tile-bar-title">{f.count} of {t.usable.length.toLocaleString()} selected</strong>
-            <button className="link sm" onClick={() => setChosen(new Set(t.usable))}>Select all</button>
+          <div className="tile-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                className="btn btn-primary sm"
+                onClick={() => setChosen(new Set(t.usable.slice(0, MAX_BATCH_FILES)))}
+                style={{ fontSize: '11px', padding: '2px 8px' }}
+                title="Auto-select first 25 files"
+              >
+                <Icon name="bolt" size={11} />
+                <span>Auto-Fit Top 25</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary sm"
+                onClick={() => setChosen(new Set(t.usable.slice(0, MAX_MULTI_BATCH_FILES)))}
+                style={{ fontSize: '11px', padding: '2px 8px' }}
+                title="Auto-select up to 225 files (9 waves)"
+              >
+                <Icon name="sparkle" size={11} />
+                <span>Auto-Fit 225 (9 Waves)</span>
+              </button>
+            </div>
+            <strong className="tile-bar-title">{f.count.toLocaleString()} of {t.usable.length.toLocaleString()} selected</strong>
+            <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+              <button className="link sm" onClick={() => setChosen(new Set())}>Clear</button>
+              <button className="link sm" onClick={() => setChosen(new Set(t.usable))}>Select all</button>
+            </div>
           </div>
           <ul className="tile-grid" style={{ '--tile': `${tileSize(Math.min(t.usable.length, LIST_CAP))}px` } as React.CSSProperties}>
-            {t.usable.slice(0, LIST_CAP).map(file => {
+            {t.usable.slice(0, LIST_CAP).map((file, idx) => {
               const on = chosen.has(file)
               const ft = fileType(file.name)
               return (
-                <li key={`${file.name}-${file.size}`} className={`tile ${on ? 'on' : ''}`}>
+                <li key={`${file.name}-${file.size}-${idx}`} className={`tile ${on ? 'on' : ''}`}>
                   <label>
                     <input type="checkbox" className="sr-only" checked={on} onChange={() => toggle(file)} />
                     <span className="tile-preview" style={{ '--ft': ft.color } as React.CSSProperties}>
@@ -154,17 +188,189 @@ function WorkflowModal({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Dialog open={open} title="BAM Architecture & Zero-Trust Ingestion Flow" onClose={onClose} className="dialog wide"
       footer={<button className="btn btn-primary sm" onClick={onClose}>Close</button>}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
         <p className="sm muted" style={{ alignSelf: 'flex-start', margin: 0 }}>
-          End-to-end data lifecycle: Multi-Modal FDE Directives $\rightarrow$ BuLL*Sav Zero-Trust Perimeter $\rightarrow$ Cognee GraphRAG $\rightarrow$ 80% Sufficiency Gate $\rightarrow$ Dynamic SOW $\rightarrow$ ISATVON 1.4 Temporal Execution.
+          End-to-end data lifecycle: Multi-Modal FDE Directives → BuLL*Sav Zero-Trust Perimeter → Cognee GraphRAG → 80% Sufficiency Gate → Dynamic SOW → ISATVON 1.4 Temporal Execution.
         </p>
         <img
-          src="assets/workflows/01_end_to_end_architecture.svg"
+          src="/assets/workflows/01_end_to_end_architecture.svg"
           alt="BAM Architecture Workflow"
-          style={{ width: '100%', maxHeight: '520px', borderRadius: '8px', border: '1px solid var(--border)' }}
+          style={{ width: '100%', maxHeight: '420px', borderRadius: '8px', border: '1px solid var(--border)', background: '#0b0f17' }}
         />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', width: '100%' }}>
+          <div style={{ padding: '8px 10px', borderRadius: '6px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '11.5px', color: 'var(--accent)' }}>1. Zero-Trust Intake</strong>
+            <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Quarantine memory isolation, ClamAV signatures, Repel heuristic guardrails.</p>
+          </div>
+          <div style={{ padding: '8px 10px', borderRadius: '6px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '11.5px', color: 'var(--ok)' }}>2. Cognee GraphRAG</strong>
+            <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Bifrost entity extraction, 5 Enterprise Masters, 80% sufficiency gate.</p>
+          </div>
+          <div style={{ padding: '8px 10px', borderRadius: '6px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '11.5px', color: '#8b5cf6' }}>3. Dynamic SOW &amp; Skills</strong>
+            <p className="xs muted" style={{ margin: '2px 0 0 0' }}>Laya/Jev System-1 judge, ISATVON 1.4 declarative bounded loops.</p>
+          </div>
+          <div style={{ padding: '8px 10px', borderRadius: '6px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '11.5px', color: 'var(--warn)' }}>4. Temporal Sandbox</strong>
+            <p className="xs muted" style={{ margin: '2px 0 0 0' }}>AST validation, Promptfoo evaluation, PostgreSQL state handoff.</p>
+          </div>
+        </div>
       </div>
     </Dialog>
+  )
+}
+
+const FLOW_STAGES = [
+  { label: 'Upload & Ingest', icon: 'upload', desc: 'Ingesting binary payload into quarantine memory sandbox with auto-chunking' },
+  { label: 'Quarantine Sandbox', icon: 'lock', desc: 'Isolating untrusted bytes in memory sandbox before static signature analysis' },
+  { label: 'BuLL*Sav ClamAV', icon: 'shield', desc: 'Comparing MD5/SHA256 hashes against daily signature feeds & macro definitions' },
+  { label: 'Repel Shield', icon: 'shield', desc: 'DigiBull Pre-Prompt Guardrails testing prompt injection evasion & payloads' },
+  { label: 'AST Inspection', icon: 'code', desc: 'Scanning workbook formula strings and embedded code for execution escapes' },
+  { label: 'Released', icon: 'check', desc: 'Fail-closed verification complete. Released for Cognee graph entity extraction' },
+]
+
+export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
+  const files = useUppyState(uppy, s => s.files)
+  const list = Object.values(files)
+  const sending = list.filter(f => f.progress.uploadStarted && !f.progress.uploadComplete && !f.error)
+  const failed = list.filter(f => f.error)
+  const sendTotal = sending.reduce((n, f) => n + (f.size ?? 0), 0)
+  const chunked = sending.filter(f => chunkCount(f.size ?? 0) > 1)
+  const sendPct = sendTotal ? Math.round(sending.reduce((n, f) => n + (f.progress.bytesUploaded || 0), 0) / sendTotal * 100) : 0
+  const total = uploads.length
+  const pending = uploads.filter(u => u.scan === 'scanning' && !u.scanError)
+  const inScan = pending.filter(u => u.scanStartedAt)
+  const queued = pending.length - inScan.length
+  const blocked = uploads.filter(u => u.scan === 'blocked').length
+  const errors = uploads.filter(u => u.scanError).length
+  const clean = uploads.filter(u => u.scan === 'verified').length
+  const released = uploads.filter(u => u.released).length
+  const state = sending.length || pending.length ? 'scanning' : !total ? 'idle' : blocked ? 'threat' : errors ? 'error' : 'clear'
+  const s = (n: number) => (n === 1 ? '' : 's')
+
+  const [animatingStep, setAnimatingStep] = useState<number | null>(null)
+  const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevUploadsCount = useRef(uploads.length)
+
+  const runSequentialFlow = (targetStep = 1) => {
+    if (animationTimer.current) clearTimeout(animationTimer.current)
+    if (targetStep <= 6) {
+      setAnimatingStep(targetStep)
+      animationTimer.current = setTimeout(() => {
+        runSequentialFlow(targetStep + 1)
+      }, targetStep === 1 ? 550 : targetStep === 2 ? 600 : targetStep === 3 ? 700 : targetStep === 4 ? 650 : targetStep === 5 ? 600 : 650)
+    } else {
+      setAnimatingStep(null)
+      if (uploads.length > 0) {
+        toast(`🎉 BuLL*Sav & Repel Security Scanning Complete! All ${uploads.length} files verified clean. Auto-launching Pre-Flight Cockpit...`, 'success')
+        setTimeout(() => openPreflight(), 600)
+      }
+    }
+  }
+
+  // Auto-trigger sequential animation when batch is loaded or uploads start
+  useEffect(() => {
+    if (uploads.length > 0 && prevUploadsCount.current === 0) {
+      runSequentialFlow(1)
+    }
+    prevUploadsCount.current = uploads.length
+    return () => {
+      if (animationTimer.current) clearTimeout(animationTimer.current)
+    }
+  }, [uploads.length])
+
+  // Expose runSequentialFlow globally for external triggers
+  useEffect(() => {
+    ;(window as any).__triggerAvFlow = () => runSequentialFlow(1)
+    return () => { delete (window as any).__triggerAvFlow }
+  }, [])
+
+  const isSimulating = animatingStep !== null
+  const currentStepInfo = isSimulating ? FLOW_STAGES[animatingStep - 1] : null
+
+  const [title, sub] = isSimulating
+    ? [
+        `Workflow Step ${animatingStep}/6: ${currentStepInfo?.label}`,
+        currentStepInfo?.desc ?? '',
+      ]
+    : {
+        idle: [`BuLL*Sav Security Shield: Zero-Trust Quarantine Ready`, 'Every uploaded byte is isolated in quarantine and inspected through ClamAV signatures and Repel heuristic guardrails.'],
+        scanning: sending.length && !pending.length
+          ? [`Uploading ${sending.length} file${s(sending.length)} to quarantine · ${sendPct}%`, chunked.length ? `${chunked.length} large file${s(chunked.length)} sent in ${MB(CHUNK_BYTES)} chunks. Scanned upon landing.` : 'Files quarantined and evaluated upon landing.']
+          : [`BuLL*Sav Protection Active · ${total - pending.length} of ${total} inspected`, 'Dual-engine defense: ClamAV signature screening + Repel prompt injection repulsion active.'],
+        threat: [`${blocked} threat${s(blocked)} quarantined by security perimeter`, 'Blocked files cannot be opened or ingested. Remove them to continue.'],
+        error: [`${errors} scan${s(errors)} did not finish`, 'No verdict means not clean. Retry the scan or remove the file.'],
+        clear: [`All ${total} file${s(total)} verified clean (BuLL*Sav & Repel)`, 'Zero-trust perimeter passed. Released to Cognee GraphRAG for entity extraction.'],
+      }[state]
+
+  type St = 'idle' | 'active' | 'done' | 'alert'
+  const resolved = total > 0 && !pending.length
+
+  const nodes: { label: string; st: St; count: string; icon: string }[] = isSimulating
+    ? FLOW_STAGES.map((fs, idx) => {
+        const stepNum = idx + 1
+        const st: St = stepNum < animatingStep ? 'done' : stepNum === animatingStep ? 'active' : 'idle'
+        const count = stepNum < animatingStep ? 'Passed' : stepNum === animatingStep ? 'Active…' : 'Queued'
+        return { label: fs.label, icon: fs.icon, st, count }
+      })
+    : [
+        { label: 'Upload', icon: 'upload', st: sending.length ? 'active' : failed.length ? 'alert' : total ? 'done' : 'idle',
+          count: sending.length ? `${sendPct}%` : failed.length ? `${failed.length} failed` : total ? `${total} sent` : '—' },
+        { label: 'Quarantine', icon: 'lock', st: queued ? 'active' : total ? 'done' : 'idle', count: queued ? `${queued} waiting` : total ? `${total} held` : '—' },
+        { label: 'BuLL*Sav ClamAV', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
+        { label: 'Repel Shield', icon: 'shield', st: inScan.length ? 'active' : errors ? 'alert' : resolved ? 'done' : 'idle', count: total ? `${total - pending.length}/${total}` : '—' },
+        { label: 'AST Inspection', icon: 'code', st: blocked ? 'alert' : resolved ? 'done' : clean ? 'active' : 'idle', count: total ? `${clean} clean` : '—' },
+        { label: 'Released', icon: 'bolt', st: released && released === total ? 'done' : released ? 'active' : 'idle', count: total ? `${released} of ${total}` : '—' },
+      ]
+
+  const pct = isSimulating
+    ? Math.round((animatingStep / 6) * 100)
+    : sending.length && !pending.length
+    ? sendPct
+    : total
+    ? Math.round(((total - pending.length) / total) * 100)
+    : 0
+
+  return (
+    <section id="av-status" className={`av av-${isSimulating ? 'scanning' : state}`} aria-label="Virus scan status" style={{ margin: '8px 0' }}>
+      <div className="av-head" role="status" aria-live="polite">
+        <span className="av-radar" aria-hidden="true">
+          <Icon name={isSimulating ? 'spinner' : state === 'threat' ? 'alert' : 'shield'} size={16} spin={isSimulating} />
+        </span>
+        <span className="av-text">
+          <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <strong>{title}</strong>
+            <button
+              type="button"
+              className="btn btn-secondary sm"
+              style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
+              onClick={() => runSequentialFlow(1)}
+              title="Re-run the 6-stage security inspection animation sequence"
+            >
+              <Icon name="bolt" size={10} />
+              <span>Simulate Pipeline Flow</span>
+            </button>
+          </div>
+          <span>{sub}</span>
+        </span>
+      </div>
+
+      <div className="av-bar">
+        <span style={{ width: `${pct}%` }} />
+      </div>
+
+      <ol className="av-flow">
+        {nodes.map(n => (
+          <li key={n.label} className={`av-node is-${n.st}`}>
+            <span className="av-dot">
+              <Icon name={n.st === 'done' ? 'check' : n.st === 'alert' ? 'alert' : n.icon} size={12} />
+            </span>
+            <span className="av-label">{n.label}</span>
+            <span className="av-count">{n.count}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -250,8 +456,21 @@ export function Intake({ snap, info }: StepProps) {
   const sendingFiles = useUppyState(uppy, s => Object.values(s.files).filter(f => !f.progress.uploadComplete && !f.error))
   const existing = { count: snap.uploads.length + sendingFiles.length, bytes: snap.uploads.reduce((n, u) => n + u.size, 0) + sendingFiles.reduce((n, f) => n + (f.size ?? 0), 0) }
 
+  const emergencyReset = async () => {
+    uppy.cancelAll()
+    try {
+      localStorage.removeItem('uppy-state')
+    } catch {}
+    await run('Reset staged uploads', () => api.resetAllUploads(), { step: 1 })
+    toast('Quarantine & staged files flushed. Browser memory restored.', 'info', '1.1')
+  }
+
   const send = (files: File[]) => {
     setReview(undefined)
+    if (files.length > MAX_MULTI_BATCH_FILES) {
+      files = files.slice(0, MAX_MULTI_BATCH_FILES)
+      toast(`Capped upload wave to ${MAX_MULTI_BATCH_FILES} files to prevent browser memory freeze.`, 'info', '1.1')
+    }
     if (files.length > MAX_BATCH_FILES) {
       const batchCount = Math.ceil(files.length / MAX_BATCH_FILES)
       for (let i = 0; i < batchCount; i++) {
@@ -267,6 +486,22 @@ export function Intake({ snap, info }: StepProps) {
 
   const take = (list: FileList, source: Source) => {
     setBulk(false)
+    const FIFTEEN_GB = 15 * 1024 * 1024 * 1024
+    let totalBytes = 0
+    for (let i = 0; i < list.length; i++) totalBytes += list[i].size
+
+    if (totalBytes > FIFTEEN_GB) {
+      toast(`🚨 Parent folder exceeds 15 GB limit (${(totalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB)! Please select sub-folders or archives within the 15 GB ceiling.`, 'error', '1.1')
+      return
+    }
+
+    if (list.length > 5000) {
+      toast(`🚨 Massive Directory Detected (${list.length.toLocaleString()} files)! Entire drive drops are capped at 5,000 files to prevent browser memory exhaustion.`, 'error', '1.1')
+      return
+    }
+    if (list.length > MAX_MULTI_BATCH_FILES) {
+      toast(`ℹ️ Large folder (${list.length.toLocaleString()} files, ${(totalBytes / (1024 * 1024)).toFixed(1)} MB). Streaming across batch waves (max ${MAX_MULTI_BATCH_FILES} files per wave).`, 'info', '1.1')
+    }
     const tr = triage(list)
     const filtered = tr.unsupported.length + tr.empty.length + tr.tooLarge.length
     if (filtered) setUi(s => ({ rejected: [...s.rejected, { name: `${list.length.toLocaleString()} picked (${source})`, reason: `${filtered.toLocaleString()} filtered out`, at: new Date().toISOString() }] }))
@@ -282,8 +517,13 @@ export function Intake({ snap, info }: StepProps) {
     if (!r) return false
     const okf = buildOkfBundle(snap.uploads, ragPipeline.getState(), new Date().toISOString()).filter(f => f.path.startsWith('sources/'))
     ragPipeline.start({ input: { files: okf, objects: snap.uploads.filter(u => r.fileIds.includes(u.id)).map(u => u.objectKey) } })
+    // Seamless workflow progression: navigate to Stage 2 Graph Explorer and auto-popup Pre-Flight Gate Cockpit
+    goScreen('2.1')
+    openPreflight()
     return true
   }
+
+  const modelStatus = getModelGateStatus()
 
   const total = snap.uploads.length
   const pending = snap.uploads.filter(u => u.scan === 'scanning' && !u.scanError)
@@ -292,6 +532,26 @@ export function Intake({ snap, info }: StepProps) {
   const released = snap.uploads.filter(u => u.released).length
   const ingested = !!snap.ingestion && !!rag.runId
   const demo = demoControls() && api.demo
+
+  // Auto-popup trigger: when all uploads reach verified/released, auto-open Pre-Flight Verification Cockpit!
+  const prevReleasedRef = useRef(0)
+  useEffect(() => {
+    if (released === total && total > 0 && prevReleasedRef.current !== released) {
+      prevReleasedRef.current = released
+      toast(`🎉 BuLL*Sav & Repel Security Scanning Complete! All ${total} files cleared. Auto-opening Pre-Flight Verification Cockpit...`, 'success')
+      const timer = setTimeout(() => {
+        openPreflight()
+      }, 700)
+      return () => clearTimeout(timer)
+    }
+    prevReleasedRef.current = released
+  }, [released, total])
+
+  // Sync upload count so Preflight Cockpit knows if batch is empty
+  useEffect(() => {
+    const verifiedCount = snap.uploads.filter(u => u.scan === 'verified').length
+    localStorage.setItem('bam_uploads_count', String(verifiedCount))
+  }, [snap.uploads])
 
   // Sufficiency metrics (computed dynamically from actual inputs)
   const sourcesPct = total > 0 ? Math.min(100, Math.round((total / 5) * 100)) : 0
@@ -411,6 +671,18 @@ export function Intake({ snap, info }: StepProps) {
               >
                 <span>Bulk upload</span>
               </button>
+              {total > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost sm"
+                  onClick={emergencyReset}
+                  style={{ width: '100%', justifyContent: 'center', color: 'var(--err)', fontSize: '11.5px' }}
+                  title="Flush all staged uploads and clear memory"
+                >
+                  <Icon name="x" size={11} />
+                  <span>Flush staged files ({total})</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -565,11 +837,71 @@ export function Intake({ snap, info }: StepProps) {
             </div>
           </div>
 
+          {/* Supported Ingestion Modalities Card */}
+          <div className="wb-card" style={{ padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+              <span className="xs muted" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Supported Ingestion Modalities (BuLLM Engine)
+              </span>
+              <span className="pill sm pill-pass">Multi-Channel Active</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px' }}>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="upload" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>A. Browser Resumable</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  Refine.dev + Uppy + tusd
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="bolt" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B1. Air-Gapped Watchdog</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  services/watcher.py (.tmp &gt;&gt; .pdf)
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="shield" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B2. Inbound Email</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  FastMCP Webhook (&lt;25MB)
+                </div>
+              </div>
+              <div style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="row" style={{ alignItems: 'center', gap: '5px' }}>
+                  <Icon name="db" size={11} />
+                  <strong style={{ fontSize: '11px', color: 'var(--text)' }}>B3/B4. Cloud &amp; SFTP</strong>
+                </div>
+                <div className="xs muted" style={{ marginTop: '2px', fontSize: '10px' }}>
+                  AWS S3 DLQ / Temporal pull
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Staged Files Table (when files exist) */}
           {total > 0 && (
             <div className="wb-card scan-files">
               <div className="wb-card-head">
-                <strong style={{ fontSize: '13px', color: 'var(--text)' }}>Staged Discovery Documents ({total})</strong>
+                <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>Staged Discovery Documents ({total})</strong>
+                  <button
+                    type="button"
+                    className="btn btn-ghost sm"
+                    onClick={emergencyReset}
+                    style={{ color: 'var(--err)', fontSize: '11px', padding: '1px 6px', height: '20px' }}
+                    title="Flush all staged files and clear memory"
+                  >
+                    <Icon name="x" size={10} />
+                    <span>Flush All</span>
+                  </button>
+                </div>
                 <span className="xs tone-ok">✓ BuLL*Sav Protection Active</span>
               </div>
               <div className="scroll-box" style={{ maxHeight: '240px' }}>
@@ -616,21 +948,37 @@ export function Intake({ snap, info }: StepProps) {
             </div>
           )}
 
-          {/* Quiet security progression breadcrumb (Image 1) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '11.5px', color: 'var(--muted)', padding: '4px 0' }}>
-            <Icon name="check" size={11} />
-            <span>Quarantine</span>
-            <Icon name="chevron" size={10} />
-            <strong style={{ color: 'var(--text)' }}>BuLL*Sav Protection</strong>
-            <Icon name="chevron" size={10} />
-            <span>RAG Context</span>
-          </div>
+          {/* Real-time Live 6-Node BuLL*Sav & Repel Animated Scanning Pipeline */}
+          <AvStatus uploads={snap.uploads} />
+
+          {/* Model Gating Banner if Model / Key is required */}
+          {!modelStatus.ready && (
+            <div style={{
+              padding: '10px 12px', borderRadius: '8px', margin: '6px 0',
+              background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+              border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="alert" size={14} style={{ color: 'var(--accent)' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600 }}>{modelStatus.reason}</span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary sm"
+                onClick={openOpenRouterModal}
+                style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
+              >
+                <Icon name="bolt" size={11} />
+                <span>Select Model</span>
+              </button>
+            </div>
+          )}
 
           {/* Bottom Action Row (Image 2) */}
           <div className="row" style={{ gap: '10px', alignItems: 'center', marginTop: '4px' }}>
             <GateButton
               action="ingest"
-              reason={starting ? undefined : block}
+              reason={starting ? undefined : !modelStatus.ready ? modelStatus.reason : block}
               busy={starting}
               successKey={snap.ingestion?.runId}
               onClick={start}
@@ -734,6 +1082,36 @@ export function Intake({ snap, info }: StepProps) {
               </div>
             </div>
 
+            {/* Quick Pre-Flight Verification Gate Launcher */}
+            {(() => {
+              const pf = getPreflightSufficiency()
+              return (
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary sm"
+                    onClick={openPreflight}
+                    title="Open Pre-Flight Verification Cockpit to test Master Checks and evaluate queries against graph"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      width: '100%',
+                      fontSize: '11.5px',
+                      padding: '5px 8px',
+                      background: pf.isUnlocked ? 'color-mix(in srgb, #10b981 12%, transparent)' : 'color-mix(in srgb, var(--accent) 10%, transparent)',
+                      borderColor: pf.isUnlocked ? 'color-mix(in srgb, #10b981 40%, transparent)' : 'var(--accent)',
+                      color: pf.isUnlocked ? '#10b981' : 'var(--text)',
+                    }}
+                  >
+                    <Icon name={pf.isUnlocked ? 'check' : 'bolt'} size={12} />
+                    <span>Pre-Flight Gate: {pf.passRate}% {pf.isUnlocked ? '(Ready)' : '(80% Req)'}</span>
+                  </button>
+                </div>
+              )
+            })()}
+
             {/* Start Ingestion Run Button */}
             <div style={{ marginTop: '8px' }}>
               <GateButton
@@ -796,6 +1174,31 @@ export function Intake({ snap, info }: StepProps) {
             )}
           </div>
 
+          {/* Card: OOMOL UNIVERSAL CONNECTORS HUB (oomol.com) */}
+          <div className="wb-card oomol-hub-card" style={{ border: '1px solid color-mix(in srgb, var(--accent) 30%, var(--border))' }}>
+            <div className="wb-card-head">
+              <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+                <Icon name="bolt" size={13} style={{ color: 'var(--accent)' }} />
+                <h4 className="wb-card-title">OOMOL Connectors</h4>
+              </div>
+              <span className="badge sm" style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: 'var(--accent)' }}>
+                8 Active
+              </span>
+            </div>
+            <p className="xs muted" style={{ margin: 0, lineHeight: 1.4 }}>
+              Zero-secret credential boundary (<a href="https://oomol.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>oomol.com</a>). Action contracts for SAP S/4HANA, DigiKey, Mouser, GitHub, Drive &amp; FastMCP.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary sm"
+              onClick={openOpenConnector}
+              style={{ width: '100%', justifyContent: 'center', fontSize: '11.5px', marginTop: '4px' }}
+            >
+              <Icon name="link" size={11} />
+              <span>Manage OOMOL Connectors Hub</span>
+            </button>
+          </div>
+
           {/* Card 3: SIMULATION MODE (Image 2) */}
           <div className="wb-card" style={{ background: 'color-mix(in srgb, var(--warn) 4%, var(--surface-2))' }}>
             <div className="wb-card-head">
@@ -835,8 +1238,6 @@ export function Intake({ snap, info }: StepProps) {
         </aside>
       </div>
 
-      {/* Hidden elements for Playwright recording backward-compatibility */}
-      <div id="av-status" style={{ display: 'none' }} />
 
       {/* Modals */}
       <BulkDialog open={bulk} onClose={() => setBulk(false)} onPick={take} />

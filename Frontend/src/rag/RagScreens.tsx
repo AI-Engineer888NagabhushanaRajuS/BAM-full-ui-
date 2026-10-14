@@ -8,7 +8,7 @@ import type { ColDef, CellKeyDownEvent } from 'ag-grid-community'
 import Editor from '@monaco-editor/react'
 import { gridTheme } from '../steps/Step2'
 import { defineThemes, editorTheme } from '../steps/Step3'
-import { toast, useUi } from '../lib/store'
+import { toast, useUi, openPreflight } from '../lib/store'
 import { RAG_ROUTES, goScreen, navigate } from '../lib/route'
 import { demoControls } from '../lib/demo'
 import type { Snapshot } from '../api/types'
@@ -17,7 +17,7 @@ import { CLASS_COUNTS, COVERAGE_META, EDGES, JOBS, NODES, QA, QA_SUGGESTIONS, SC
 import { buildOkfBundle, conceptStatus, conceptType, OKF_VERSION, toTar, trustTier, validateOkf, type TrustTier } from './okf.ts'
 import { isRunning, ragPipeline, relations, stepStatus, useRag, type JobStatus, type RagStepKey, type RagStepStatus } from './ragPipeline.ts'
 import { JevVisionHUD } from '../components/JevVisionHUD'
-import { CogneePreflightCockpit } from './CogneePreflightCockpit'
+import { CogneePreflightCockpit, getPreflightSufficiency } from './CogneePreflightCockpit'
 
 
 // Navigation between 2.1–2.3 is the tracker's stage 2 panel (one navigation for the whole app).
@@ -239,6 +239,19 @@ function GraphExplorer() {
   const chunk = stepStatus(s, 'chunk'), extract = stepStatus(s, 'extract'), graph = stepStatus(s, 'graph'), schemas = stepStatus(s, 'schemas')
   const jobsDone = s.jobs.filter(j => j === 'done' || j === 'skipped').length
 
+  const preflight = getPreflightSufficiency()
+
+  // Real-time workflow auto-popup: when arriving on 2.1 Context Graph, automatically present the Pre-Flight Cockpit if not yet unlocked
+  useEffect(() => {
+    if (!preflight.isUnlocked && !sessionStorage.getItem('bam_preflight_auto_shown_21')) {
+      sessionStorage.setItem('bam_preflight_auto_shown_21', '1')
+      const timer = setTimeout(() => {
+        openPreflight()
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [preflight.isUnlocked])
+
   const visible = NODES.filter(n => (extract === 'running' || extract === 'done' || extract === 'failed') && jobsDone >= n.after && !(n.filter && hidden.has(n.filter)))
   const ids = new Set(visible.map(n => n.id))
 
@@ -418,6 +431,34 @@ function GraphExplorer() {
   return (
     <div className="rag-grid g21">
       <section className="rag-card graph-card" aria-labelledby="graph-title">
+        {/* Pre-Flight Gate Status Banner */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 12px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '15px' }}>{preflight.isUnlocked ? '🛡️' : '⚡'}</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>
+                Pre-Flight Gate: <span style={{ color: preflight.isUnlocked ? '#10b981' : 'var(--accent)' }}>{preflight.passRate}% {preflight.isUnlocked ? 'PASSED (SOW Ready)' : 'LOCKED (80% Req)'}</span>
+              </div>
+              <div className="xs muted" style={{ fontSize: '10.5px' }}>
+                {preflight.passCount} of {preflight.totalCount} Master Checks verified against 5 Masters.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={`btn sm ${preflight.isUnlocked ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={openPreflight}
+            style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
+          >
+            <Icon name="bolt" size={11} />
+            <span>Open Pre-Flight Cockpit</span>
+          </button>
+        </div>
+
         <header className="rag-card-head">
           <h3 id="graph-title">Context graph</h3>
           <span className="muted xs">{s.runId ?? 'no run'} · OKF classes</span>

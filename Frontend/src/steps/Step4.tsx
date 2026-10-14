@@ -65,10 +65,10 @@ export function Center({ snap, info }: StepProps) {
       onClick: () => setAsk('commit') },
     { key: 'deploy', caption: '04 / Deploy', icon: 'rocket', busy: busy === 'Deploy', action: 'deploy', successKey: isDeployed ? p.deployed!.at : undefined,
       state: isDeployed ? 'done' : deploying ? 'running' : isCommitted ? 'ready' : 'locked',
-      stateText: isDeployed ? 'Live on Staging' : deploying ? 'Deploying' : isCommitted ? 'Ready to deploy' : 'Locked',
-      label: 'Deploy to Staging',
+      stateText: isDeployed ? 'Live on Production' : deploying ? 'Deploying' : isCommitted ? 'Ready to deploy' : 'Locked',
+      label: 'Deploy to Production Runtime',
       reason: isDeployed ? undefined : ro ?? (!isCommitted ? 'Commit this manifest to BAM_db first' : deploying ? 'Deployment in progress' : undefined),
-      hint: isDeployed ? `Deployed ${fmtTime(p.deployed!.at)}` : 'Releases the committed manifest to Staging',
+      hint: isDeployed ? `Deployed ${fmtTime(p.deployed!.at)}` : 'Releases the committed manifest to production FastMCP cluster',
       onClick: () => setAsk('deploy') },
   ]
 
@@ -109,14 +109,14 @@ export function Center({ snap, info }: StepProps) {
           consequences={[
             'Writes two JSONB rows to BAM_db: the JSON contract and the AST Python code.',
             `Rows are tagged with manifest ${m?.version} and hash ${m ? shortHash(m.hash) : ''}. Committed rows are the frozen version: immutable, with the run's evidence references.`,
-            `Nothing is deployed yet: Staging stays on ${p.deployed?.version ?? 'its current state (nothing deployed)'}.`,
+            `Nothing is deployed yet: Cluster stays on ${p.deployed?.version ?? 'its current state (nothing deployed)'}.`,
           ]} />
-        <Confirm open={ask === 'deploy'} title={`Deploy manifest ${m?.version} to Staging?`} confirmLabel="Deploy to Staging" onClose={() => setAsk(null)}
+        <Confirm open={ask === 'deploy'} title={`Deploy manifest ${m?.version} to Production Runtime?`} confirmLabel="Deploy to Production" onClose={() => setAsk(null)}
           onConfirm={() => { setAsk(null); awaitingDeploy.current = true; void run('Deploy', () => api.deployToStaging(), { step: 4 }) }}
           consequences={[
-            `Releases the committed manifest ${m?.version} (hash ${m ? shortHash(m.hash) : ''}) to the Staging environment.`,
-            p.deployed ? `Replaces ${p.deployed.version} on Staging. Rollback target: ${p.deployed.version} (still committed in BAM_db).` : 'There is no earlier Staging deployment to roll back to.',
-            'When it finishes, the view switches to the Staging environment. The FDE / Staging selector itself never deploys anything.',
+            `Releases the committed manifest ${m?.version} (hash ${m ? shortHash(m.hash) : ''}) to the live Production FastMCP Runtime cluster.`,
+            p.deployed ? `Replaces ${p.deployed.version} on Production. Rollback target: ${p.deployed.version} (still committed in BAM_db).` : 'There is no earlier deployment to roll back to.',
+            'When it finishes, the view switches to the live environment. The FDE / Production selector itself never deploys anything.',
           ]} />
       </div>
     </Pane>
@@ -242,17 +242,17 @@ export function Right({ snap }: StepProps) {
           {p.artifacts.length > 0 && <StageList stages={p.artifacts} />}
           {!!p.draft && !isCommitted && <p className="rung-next"><Icon name="chevron" size={11} />Next: 03 / Commit to BAM_db in the centre pane</p>}
         </Rung>
-        <Rung n={4} title="Deployed to Staging" done={isDeployed} active={isCommitted && !isDeployed} refv={p.deployed}
-          desc="The committed manifest and its skills are released to the Staging environment.">
-          {p.deployed && !isDeployed && <p className="muted xs">Staging runs an older manifest ({p.deployed.version}) until you deploy this one.</p>}
+        <Rung n={4} title="Live on Production Runtime" done={isDeployed} active={isCommitted && !isDeployed} refv={p.deployed}
+          desc="The committed manifest and its skills are released to the live Production FastMCP cluster.">
+          {p.deployed && !isDeployed && <p className="muted xs">Runtime runs an older manifest ({p.deployed.version}) until you deploy this one.</p>}
           {p.deploy && <StageList stages={[p.deploy]} />}
-          {isCommitted && !isDeployed && <p className="rung-next"><Icon name="chevron" size={11} />Next: 04 / Deploy to Staging in the centre pane</p>}
+          {isCommitted && !isDeployed && <p className="rung-next"><Icon name="chevron" size={11} />Next: 04 / Deploy to Production in the centre pane</p>}
         </Rung>
       </ol>
       <Section title="Version history"><VersionHistory snap={snap} limit={6} /></Section>
       <div id="deployed-section" />
-      <Section title="Deployed to Staging" aside={p.deployed && <span className="mono xs muted">{p.deployed.version}</span>}>
-        {p.deployedSkills.length === 0 ? <p className="muted sm">Nothing deployed yet. Skills appear here after a Staging deployment.</p> : p.deployedSkills.map(g => (
+      <Section title="Live on Production Runtime" aside={p.deployed && <span className="mono xs muted">{p.deployed.version}</span>}>
+        {p.deployedSkills.length === 0 ? <p className="muted sm">Nothing deployed yet. Skills appear here after a production deployment.</p> : p.deployedSkills.map(g => (
           <details key={g.agent} className="accordion" open>
             <summary><Icon name="palette" size={12} />{g.agent}<span className="muted xs">{g.skills.length}</span></summary>
             <ul>{g.skills.map(s => <li key={s}>{s}</li>)}</ul>

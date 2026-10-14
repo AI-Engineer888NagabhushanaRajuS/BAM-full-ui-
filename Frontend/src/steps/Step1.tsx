@@ -6,7 +6,8 @@ import { isReleased } from '../api/scanGate.ts'
 import type { Sow } from '../api/types'
 import type { StepProps } from '../App'
 import { useAction } from '../lib/data'
-import { setUi, useUi } from '../lib/store'
+import { setUi, useUi, openPreflight, openOpenConnector, openOpenRouterModal, toast } from '../lib/store'
+import { getModelGateStatus } from '../lib/modelGate'
 import { DemoTag } from '../components/release'
 import { goScreen, goStep } from '../lib/route'
 import { isRunning, ragPipeline, useRag } from '../rag/ragPipeline.ts'
@@ -15,9 +16,11 @@ import { editCount } from '../lib/sowDiff'
 import { sowComparison, type CompareWith } from '../lib/sowCompare'
 import { Banner, Copy, Empty, ErrorState, GateButton, Icon, Pane, Section, Skeleton, StageList, StatusPill, fmtTime } from '../components/ui'
 import { JevVisionHUD } from '../components/JevVisionHUD'
+import { getPreflightSufficiency } from '../rag/CogneePreflightCockpit'
+import { SowImageEditorModal } from '../components/SowImageEditorModal'
 
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, onOpenImageEditor }: { editor: Editor; onOpenImageEditor?: () => void }) {
   const st = useEditorState({ editor, selector: ({ editor: e }) => ({
     bold: e.isActive('bold'), italic: e.isActive('italic'), h2: e.isActive('heading', { level: 2 }), h3: e.isActive('heading', { level: 3 }),
     ul: e.isActive('bulletList'), ol: e.isActive('orderedList'), undo: e.can().undo(), redo: e.can().redo(), editable: e.isEditable,
@@ -37,6 +40,26 @@ function Toolbar({ editor }: { editor: Editor }) {
       <span className="tb-sep" />
       {b('Undo', '↶', undefined, () => editor.chain().focus().undo().run(), !st.undo)}
       {b('Redo', '↷', undefined, () => editor.chain().focus().redo().run(), !st.redo)}
+      <span className="tb-sep" />
+      <button
+        type="button"
+        className="tb tb-image-markup"
+        aria-label="CAD / Drawing Markup (Filerobot)"
+        title="Open Filerobot Image Editor to annotate CAD blueprints, cross-sections, and insert redline markup into SOW"
+        disabled={!st.editable}
+        onClick={onOpenImageEditor}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          color: 'var(--accent)',
+          fontWeight: 600,
+          padding: '0 8px',
+        }}
+      >
+        <span>📐</span>
+        <span>Redline CAD / Drawing</span>
+      </button>
     </div>
   )
 }
@@ -51,7 +74,22 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
   const [showDiff, setShowDiff] = useState(true)
   const [compareWith, setCompareWith] = useState<CompareWith>('previous')
   const [liveHtml, setLiveHtml] = useState(sow.html)
+  const [imageEditorOpen, setImageEditorOpen] = useState(false)
+  const [editingImageSrc, setEditingImageSrc] = useState<string | undefined>(undefined)
+  const [editingImageCaption, setEditingImageCaption] = useState<string | undefined>(undefined)
   const { busy, run } = useAction()
+
+  const handleOpenImageEditor = () => {
+    setEditingImageSrc(undefined)
+    setEditingImageCaption(undefined)
+    setImageEditorOpen(true)
+  }
+
+  const handleInsertAnnotatedImage = (dataUri: string, captionTitle?: string) => {
+    if (!editor) return
+    const title = captionTitle || 'Annotated CAD Drawing'
+    editor.chain().focus().setImage({ src: dataUri, alt: title, title }).run()
+  }
 
   const editor = useEditor({
     extensions: [...sowExtensions, ChangeHighlight], content: sow.html, editable,
@@ -69,6 +107,27 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
       }, 800)
     },
   })
+
+  // Click on any embedded drawing/image in the SOW to edit directly in Filerobot
+  useEffect(() => {
+    const dom = editor?.view.dom
+    if (!dom) return
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName?.toLowerCase() === 'img') {
+        const src = target.getAttribute('src')
+        const alt = target.getAttribute('alt') || 'CAD Markup'
+        if (src) {
+          setEditingImageSrc(src)
+          setEditingImageCaption(alt)
+          setImageEditorOpen(true)
+        }
+      }
+    }
+    dom.addEventListener('click', handleClick)
+    return () => dom.removeEventListener('click', handleClick)
+  }, [editor])
+
   useEffect(() => () => clearTimeout(timer.current), [])
   // emitUpdate=false: toggling editability is not an edit and must not autosave a new version.
   useEffect(() => { editor?.setEditable(editable, false) }, [editor, editable])
@@ -121,6 +180,19 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
           </select>
         </label>
         <span className={`edits-chip ${edits ? 'has' : ''}`}>{editsText}</span>
+        {info.editable && sow.status !== 'regenerating' && (
+          <button
+            type="button"
+            className="btn xs btn-secondary"
+            disabled={!!busy}
+            onClick={() => run('Regenerate SOW', () => api.requestSowChanges(sow.version, 'Regenerate tailored SOW matching ingested files and modules'), { success: 'SOW regenerated from ingested source files', step: 1 })}
+            title="Re-synthesize SOW requirements dynamically from currently ingested source documents"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', borderRadius: '4px' }}
+          >
+            <Icon name="refresh" size={11} />
+            <span>Regenerate from Files</span>
+          </button>
+        )}
         <StatusPill status={approved ? 'done' : sow.status === 'regenerating' ? 'running' : 'needs_review'}
         text={approved ? `Approved v${sow.approval!.version}` : sow.status === 'regenerating' ? 'Regenerating' : `Draft v${sow.version}`} /></span>}
       footer={<>
@@ -134,6 +206,17 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
           {!approved && !decideReason && <span className="muted sm">Approving v{sow.version} unlocks 3.2 and extracts skills from this exact version.</span>}
         </div>
         <div className="row">
+          {info.editable && sow.status !== 'regenerating' && !approved && (
+            <button
+              className="btn btn-secondary"
+              disabled={!!busy}
+              onClick={() => run('Regenerate SOW', () => api.requestSowChanges(sow.version, 'Regenerate tailored SOW matching ingested files and modules'), { success: 'SOW regenerated from ingested source files', step: 1 })}
+              title="Re-synthesize SOW requirements dynamically from currently ingested source documents"
+            >
+              <Icon name="refresh" />
+              Regenerate from Ingested Files
+            </button>
+          )}
           {approved && info.editable && <button className="btn btn-ghost" disabled={!!busy}
             onClick={() => run('Close SOW review', () => api.closeReopen(1), { step: 1 }).then(() => goStep(2))}>Keep approval and close</button>}
           <GateButton action="approve" reason={approveReason} busy={busy === 'Approve'} successKey={sow.approval?.version}
@@ -151,10 +234,17 @@ function SowEditor({ sow, editable, info }: { sow: Sow; editable: boolean; info:
       <SowMeta sow={sow} />
       {showDiff && cmp.kind === 'none' && <Banner tone="info" icon="question"><strong>No comparison yet.</strong> {cmp.reason}</Banner>}
       <div className="editor-bar">
-        {editor && <Toolbar editor={editor} />}
+        {editor && <Toolbar editor={editor} onOpenImageEditor={handleOpenImageEditor} />}
         {showDiff && cmp.kind === 'diff' && <DiffLegend from={cmp.from} to={cmp.to} counts={diff.counts} />}
       </div>
       <div className={`sow-doc ${editable ? 'editable' : 'readonly'} ${showDiff ? 'tracking' : ''}`}><EditorContent editor={editor} aria-label="SOW document" /></div>
+      <SowImageEditorModal
+        open={imageEditorOpen}
+        onClose={() => { setImageEditorOpen(false); setEditingImageSrc(undefined) }}
+        onInsertImage={handleInsertAnnotatedImage}
+        initialImage={editingImageSrc}
+        initialCaption={editingImageCaption}
+      />
     </Pane>
   )
 }
@@ -178,12 +268,36 @@ export function Center({ snap, info }: StepProps) {
           </Empty>
         : <Empty icon="clock" title="Ready for SOW synthesis" action={
             <div className="row" style={{ gap: '8px' }}>
-              <button className="btn btn-primary" disabled={!!busy} onClick={() => run('Generate SOW', () => api.startSowGeneration(ragPipeline.getState().runId), { step: 1 })}>
+              <button
+                className="btn btn-primary"
+                disabled={!!busy}
+                onClick={() => {
+                  const modelStatus = getModelGateStatus()
+                  if (!modelStatus.ready) {
+                    toast(`Inference Model Required: ${modelStatus.reason}`, 'info')
+                    openOpenRouterModal()
+                    return
+                  }
+                  const pf = getPreflightSufficiency()
+                  if (!pf.isUnlocked) {
+                    toast(`Pre-Flight Gate is currently at ${pf.passRate}% (< 80% req). Opening Pre-Flight Cockpit to complete verification.`, 'info')
+                    openPreflight()
+                    return
+                  }
+                  run('Generate SOW', () => api.startSowGeneration(ragPipeline.getState().runId), { step: 1 })
+                }}
+              >
                 <Icon name="bolt" />Generate SOW with Certified Context
               </button>
-              <button className="btn btn-secondary" onClick={() => goScreen('2.3')}>
-                Verify in 2.3 Cockpit
-              </button>
+              {(() => {
+                const pf = getPreflightSufficiency()
+                return (
+                  <button className="btn btn-secondary" onClick={openPreflight}>
+                    <Icon name={pf.isUnlocked ? 'check' : 'shield'} size={12} />
+                    <span>Pre-Flight Gate ({pf.passRate}%)</span>
+                  </button>
+                )
+              })()}
             </div>
           }>
             {ragRunning ? 'The RAG pipeline is running. Click Generate SOW once verified.' : 'Context graph and pre-flight checks are certified. Synthesize the SOW draft from the discovery context.'}
@@ -234,15 +348,138 @@ function SowAccuracy({ sow }: { sow: Sow }) {
   )
 }
 
-export function Right({ snap }: StepProps) {
+// ---- 3.1 Three-Pane Architecture (Workflows Left, Draft Middle, Scope/Evidence Right) ----
+export function WorkflowPane({ snap }: StepProps) {
   const sow = snap.sow
+  const { busy, run } = useAction()
+  const runId = useRag(s => s.runId)
+  const preflight = getPreflightSufficiency()
+
   return (
-    <Pane id="right-title" kicker="Evidence and status" title="SOW generation">
+    <Pane id="left-title" kicker="Workflows & Execution" title="SOW generation">
+      {/* Pre-Flight Gate Warning Card if not unlocked */}
+      {!preflight.isUnlocked && (
+        <div style={{
+          padding: '10px 12px', borderRadius: '8px', marginBottom: '12px',
+          background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+          border: '1px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '6px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: 'var(--accent)' }}><Icon name="alert" size={13} /></span>
+            <strong style={{ fontSize: '12px', color: 'var(--text)' }}>
+              Pre-Flight Gate Locked ({preflight.passRate}% / 80% req)
+            </strong>
+          </div>
+          <p className="xs muted" style={{ margin: 0, lineHeight: 1.3 }}>
+            Master Context Sufficiency must reach 80% to certify SOW generation against the 5 Masters.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary sm"
+            onClick={openPreflight}
+            style={{ fontSize: '11px', marginTop: '4px', height: '26px' }}
+          >
+            <Icon name="bolt" size={11} />
+            <span>Open Pre-Flight Cockpit</span>
+          </button>
+        </div>
+      )}
+
+      <Section title="Active Pipeline">
+        <p className="muted sm">Workflows allowed for this project. Execution progress and pipeline status report here in real time.</p>
+        {snap.sowGeneration.length === 0
+          ? <Empty icon="clock" title="No SOW generation yet">Runs when the RAG pipeline (stage 2) finishes. Each stage reports its status, time and run ID here.</Empty>
+          : <StageList stages={snap.sowGeneration} />}
+      </Section>
+      <Section title="Workflow Actions">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button
+            type="button"
+            className="btn btn-secondary sm"
+            onClick={openPreflight}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Icon name={preflight.isUnlocked ? 'check' : 'shield'} size={12} />
+            <span>Pre-Flight Cockpit ({preflight.passRate}% {preflight.isUnlocked ? 'PASS' : 'GATE'})</span>
+          </button>
+          <button
+            className="btn btn-secondary sm"
+            disabled={busy === 'Regenerate SOW'}
+            onClick={() => void run('Regenerate SOW', () => api.startSowGeneration(ragPipeline.getState().runId), { success: 'SOW regenerated from context pipeline.', step: 1 })}
+          >
+            <Icon name="refresh" />Regenerate SOW from RAG
+          </button>
+          <button className="btn btn-ghost sm" onClick={() => goScreen('2.1')}>
+            <Icon name="link" size={12} />Context Graph Explorer (2.1)
+          </button>
+        </div>
+      </Section>
+      <Section title="Pipeline Run Context">
+        <dl className="kv">
+          <div><dt>RAG Run ID</dt><dd className="mono xs">{runId ?? 'baseline'}</dd></div>
+          <div><dt>SOW Status</dt><dd><StatusPill status={sow?.status === 'approved' ? 'pass' : 'running'} text={sow?.status ?? 'pending'} /></dd></div>
+        </dl>
+      </Section>
+    </Pane>
+  )
+}
+
+export function ScopeAndEvidencePane({ snap }: StepProps) {
+  const sow = snap.sow
+  const runId = useRag(s => s.runId)
+  const synced = useRag(s => s.lastSyncAt)
+  return (
+    <Pane id="right-title" kicker="Reports & Evidence" title="Context grounding">
       <JevVisionHUD mode="sow" sources={snap.uploads.map(u => u.name)} compact />
-      {snap.sowGeneration.length === 0
-        ? <Empty icon="clock" title="No SOW generation yet">Runs when the RAG pipeline (stage 2) finishes. Each stage reports its status, time and run ID here.</Empty>
-        : <StageList stages={snap.sowGeneration} />}
       {sow && <SowAccuracy sow={sow} />}
+      <Section title="Source references" aside={<span className="muted sm">{snap.uploads.filter(isReleased).length}</span>}>
+        {!snap.uploads.some(isReleased) ? <p className="muted sm">No verified documents yet.</p> : (
+          <ul className="files">
+            {snap.uploads.filter(isReleased).map(u => (
+              <li key={u.id} className="file"><Icon name="file" />
+                <div className="file-main"><span className="file-name">{u.name}</span><Copy value={u.objectKey} label="object key" /></div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button className="link sm" onClick={() => goScreen('1.1')}><Icon name="upload" size={12} />Add documents in 1.1 Intake console</button>
+      </Section>
+      <Section title="OOMOL Universal Connectors" aside={<span className="pill sm pill-pass">oomol.com</span>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', padding: '4px 6px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ color: '#10b981' }}>●</span>
+              <strong>SAP S/4HANA ERP</strong>
+            </span>
+            <span className="mono xs tone-ok">Verified</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', padding: '4px 6px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ color: '#10b981' }}>●</span>
+              <strong>DigiKey Pricing API</strong>
+            </span>
+            <span className="mono xs tone-ok">Active</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', padding: '4px 6px', background: 'var(--surface-2)', borderRadius: '4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ color: '#10b981' }}>●</span>
+              <strong>GitHub Enterprise AST</strong>
+            </span>
+            <span className="mono xs tone-ok">Synced</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary sm"
+            onClick={openOpenConnector}
+            title="Open OOMOL OpenConnector Hub to inspect credentials, actions, and test connectors"
+            style={{ fontSize: '11px', marginTop: '4px', justifyContent: 'center' }}
+          >
+            <Icon name="link" size={11} />
+            <span>Manage OOMOL Connectors Hub</span>
+          </button>
+        </div>
+      </Section>
+
       <Section title="SOW versions">
         {!sow ? <p className="muted sm">Produced by the SOW generation stage.</p> : (
           <dl className="kv">
@@ -257,33 +494,9 @@ export function Right({ snap }: StepProps) {
   )
 }
 
-/** 3.1 left pane: read-only context. Documents are added only in 1.1. */
-export function Sources({ snap }: StepProps) {
-  const runId = useRag(s => s.runId)
-  const synced = useRag(s => s.lastSyncAt)
-  return (
-    <Pane id="left-title" kicker="Context and scope" title="Sources">
-      <Section title="Source references" aside={<span className="muted sm">{snap.uploads.filter(isReleased).length}</span>}>
-        {!snap.uploads.some(isReleased) ? <p className="muted sm">No verified documents yet.</p> : (
-          <ul className="files">
-            {snap.uploads.filter(isReleased).map(u => (
-              <li key={u.id} className="file"><Icon name="file" />
-                <div className="file-main"><span className="file-name">{u.name}</span><Copy value={u.objectKey} label="object key" /></div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <button className="link sm" onClick={() => goScreen('1.1')}><Icon name="upload" size={12} />Add documents in 1.1 Intake console</button>
-      </Section>
-      <Section title="RAG context">
-        <dl className="kv">
-          <div><dt>Context run</dt><dd className="mono xs">{runId ?? 'not run'}</dd></div>
-          <div><dt>Cognee synced</dt><dd>{synced ? fmtTime(synced) : 'not yet'}</dd></div>
-        </dl>
-        <button className="link sm" onClick={() => goScreen('2.1')}><Icon name="link" size={12} />Open 2.1 Context graph</button>
-      </Section>
-    </Pane>
-  )
-}
+// Backward-compatible exports
+export const Right = ScopeAndEvidencePane
+export const Sources = ScopeAndEvidencePane
+export const Left = WorkflowPane
 
 export { Intake } from './Intake'

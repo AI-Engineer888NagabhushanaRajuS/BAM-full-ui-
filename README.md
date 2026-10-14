@@ -318,7 +318,91 @@ flowchart LR
 
 ---
 
-### 8. Test & Verification Results Matrix
+### 8. OOMOL Universal Connectors Hub (`oomol.com`) & FastMCP Protocol Binding
+* **Core Code**: [`Frontend/src/components/OpenConnectorModal.tsx`](Frontend/src/components/OpenConnectorModal.tsx) | [`Frontend/src/rag/CogneePreflightCockpit.tsx`](Frontend/src/rag/CogneePreflightCockpit.tsx)
+
+```mermaid
+flowchart LR
+    subgraph EnterpriseSources["Enterprise Data Sources"]
+        ERP["SAP S/4HANA\n(BOM & Purchase Orders)"]
+        DIST["DigiKey & Mouser\n(Live Component Pricing)"]
+        CLOUD["AWS S3 / GCS / Azure\n(CAD Blueprints & Mill Certs)"]
+        GIT["Git / GitHub Enterprise\n(Firmware & Version Tags)"]
+    end
+
+    subgraph OOMOL["OOMOL Universal Connectors Hub (oomol.com)"]
+        AUTH["Zero-Secret Token Boundary\n(OAuth2 / FastMCP Handshake)"]
+        SCHEMA["Schema Normalizer\n(Converts to OKF v0.2 Primitives)"]
+    end
+
+    subgraph BAMCore["BAM Data Plane"]
+        QUAR["BuLL*Sav Security Perimeter"]
+        COG["Cognee GraphRAG Fabric"]
+    end
+
+    ERP --> AUTH
+    DIST --> AUTH
+    CLOUD --> AUTH
+    GIT --> AUTH
+    AUTH --> SCHEMA
+    SCHEMA --> QUAR
+    QUAR --> COG
+```
+
+* **Zero-Secret Token Boundary**: Credentials and API tokens never leak to browser memory; authentication is isolated via zero-secret FastMCP token exchange.
+* **8 Pre-Configured Enterprise Connectors**:
+  * **SAP S/4HANA**: Real-time extraction of live supplier BOMs and ERP work orders.
+  * **DigiKey Electronics & Mouser API**: Live parametric component availability, packaging, and unit pricing.
+  * **AWS S3 / Google Cloud Storage / Azure Blob**: Automated batch ingestion of high-resolution CAD files (`.step`, `.dwg`) and mill certificates.
+  * **GitHub / GitLab Enterprise**: Traceable firmware commit hashes and engineering change notifications (ECNs).
+* **1-Click Modal Control**: Accessible via the `[ ◫ OOMOL Connectors Hub ]` button in the Pre-Flight Cockpit header.
+
+---
+
+### 9. DigiBull REPEL Pre-Prompt Guardrails & SRI Bounded Iteration (`digibull.ai`)
+* **Core Code**: [`Frontend/src/api/scanGate.ts`](Frontend/src/api/scanGate.ts) | [`Frontend/server/laya-judge/server.ts`](Frontend/server/laya-judge/server.ts)
+
+* **DigiBull REPEL (Prompt Injection & Evasion Defense)**:
+  * Operates as Tier-2 defense immediately following ClamAV Tier-1 static signature scanning.
+  * Inspects untrusted documents, spreadsheet formula expressions, and CAD metadata for prompt injection attempts, heuristic jailbreaks, and hidden escape sequences.
+  * Fail-closed architecture: Any non-zero threat score routes the file directly to air-gapped quarantine.
+* **DigiBull SRI (Structured Recursive Inference)**:
+  * Enforces declarative bounded iterations across all agent workflows (`max_iterations: 3, budget_limit: 5000ms`).
+  * Prevents runaway LLM reasoning loops and nondeterministic drift during SOW requirement extraction.
+  * Real-time telemetry reporting through ISATVON `N - Notification` state channels.
+
+---
+
+### 10. Scaleflex Filerobot CAD & Drawing Redline Markup (`@scaleflex/filerobot-image-editor`)
+* **Core Code**: [`Frontend/src/components/SowImageEditorModal.tsx`](Frontend/src/components/SowImageEditorModal.tsx) | [`Frontend/src/components/cadDrawings.ts`](Frontend/src/components/cadDrawings.ts) | [`Frontend/src/steps/Step1.tsx`](Frontend/src/steps/Step1.tsx)
+
+* **Integrated Visual Engineering Editor**:
+  * Directly embedded in Stage 3.1 SOW Workbench via the `[ 📐 Redline CAD / Drawing ]` toolbar button.
+  * Allows engineers to annotate technical drawings, cross-sections, and CAD schematics with ASME Y14.5 callouts, arrows, redline revision clouds, and geometric tolerances.
+  * Click-to-edit: Clicking on any embedded image inside the TipTap SOW draft reopens Filerobot with existing annotations preserved.
+  * One-click insertion: Automatically renders high-resolution base64 PNGs directly into the editable TipTap SOW document.
+
+---
+
+### 11. Real-Time Staging Automations & Strict Model Gating
+* **Core Code**: [`Frontend/src/lib/modelGate.ts`](Frontend/src/lib/modelGate.ts) | [`Frontend/src/steps/Intake.tsx`](Frontend/src/steps/Intake.tsx) | [`Frontend/src/rag/CogneePreflightCockpit.tsx`](Frontend/src/rag/CogneePreflightCockpit.tsx)
+
+* **Automated Real-Time Staging Popups**:
+  * **Stage 1 Finish**: When uploaded files complete BuLL*Sav ClamAV + Repel heuristic scanning, the system automatically triggers a success toast and auto-launches the **Pre-Flight Verification Cockpit (`openPreflight()`)**.
+  * **Pre-Flight Battery Finish**: When the pre-flight verification battery completes with $\ge 80\%$ context sufficiency, the system automatically celebrates via toast and auto-navigates to **Stage 3.1 SOW Workbench (`goScreen('3.1')`)** while starting SOW synthesis.
+  * **Stage 3.1 SOW Approval**: Approving the SOW automatically triggers extraction and advances to **Stage 3.2 Skills Extraction (`goStep(2)`)**.
+  * **Stage 3.2 Contract Generation**: Generating the contract automatically advances to **Stage 4.1 Temporal Validation (`goStep(3)`)**.
+* **Strict Model Gating**:
+  * Zero Progression Without Inference Engine: `GateButton` is strictly locked with a descriptive reason if no model is selected or if an OpenRouter cloud/free model is selected without an API key.
+  * 1-Click Model Launcher: Displays an inline alert banner with a `Select Model` button opening the `OpenRouterKeyModal`.
+  * Local ONNX Support: Supports zero-key local inference via `laya-onnx` (ModernBERT-large ONNX) and `laya-multilingual`.
+* **Dynamic Pre-Flight Sufficiency**:
+  * De-hardcoded: If no files are uploaded (`bam_uploads_count === 0`), context sufficiency is strictly 0% and SOW generation is firmly locked.
+  * Live Verification: Questions start `pending` and only update to `passed` upon actual graph evaluation or FDE manual endorsement.
+
+---
+
+### 12. Test & Verification Results Matrix
 
 | Test Category | Command / Target | Result | Status |
 | :--- | :--- | :--- | :--- |
