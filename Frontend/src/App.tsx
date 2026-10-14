@@ -151,7 +151,6 @@ function Workbench() {
   }
   return (
     <div className="app" data-env={env}>
-      <a className="skip" href="#center-title">Skip to screen content</a>
       <TopBar snap={snap} syncedAt={syncedAt} offline={!!error} screenId={screen.id} />
       <TrackerStrip />
       {body}

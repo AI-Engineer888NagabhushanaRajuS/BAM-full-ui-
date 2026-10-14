@@ -305,6 +305,7 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
   const state = sending.length || pending.length ? 'scanning' : !total ? 'idle' : blocked ? 'threat' : errors ? 'error' : 'clear'
   const s = (n: number) => (n === 1 ? '' : 's')
 
+  const [showModal, setShowModal] = useState(false)
   const [animatingStep, setAnimatingStep] = useState<number | null>(null)
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isRunningRef = useRef(false)
@@ -397,62 +398,219 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
     : 0
 
   return (
-    <section id="av-status" className={`av av-${isSimulating ? 'scanning' : state}`} aria-label="Virus scan status" style={{ margin: '8px 0' }}>
-      <div className="av-head" role="status" aria-live="polite">
-        <span className="av-radar" aria-hidden="true">
-          <Icon name={isSimulating ? 'spinner' : state === 'threat' ? 'alert' : 'shield'} size={16} spin={isSimulating} />
-        </span>
-        <span className="av-text">
-          <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <strong>{title}</strong>
+    <>
+      <div id="av-status" className="av-strip-wrap">
+        <div
+          className={`av-strip av-strip-${isSimulating ? 'scanning' : state}`}
+          onClick={() => setShowModal(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setShowModal(true)
+            }
+          }}
+          title="BuLLSav Twin Engine: Click to inspect security pipeline & consensus tree"
+        >
+          {/* Left Brand Badge */}
+          <div className="av-strip-brand">
+            <span className="av-strip-radar" aria-hidden="true">
+              <Icon name={isSimulating ? 'spinner' : state === 'threat' ? 'alert' : 'shield'} size={14} spin={isSimulating} />
+            </span>
+            <strong className="av-strip-name">BuLLSav Twin Engine</strong>
+            <span className={`badge sm ${resolved ? 'badge-ok' : isSimulating || inScan.length ? 'badge-accent' : ''}`}>
+              {isSimulating
+                ? `Scanning Step ${animatingStep}/5`
+                : resolved
+                ? '2/2 Clean'
+                : inScan.length
+                ? `Inspecting ${total - pending.length}/${total}`
+                : 'Consensus Gate'}
+            </span>
+          </div>
+
+          {/* Connected Micro-Nodes Rail ("just a Line of components") */}
+          <div className="av-strip-rail" aria-hidden="true">
+            {nodes.map((n, idx) => (
+              <span key={n.label} className={`av-rail-node is-${n.st}`}>
+                <span className="av-rail-dot">
+                  <Icon name={n.st === 'done' ? 'check' : n.st === 'alert' ? 'alert' : n.icon} size={9} />
+                </span>
+                <span className="av-rail-label">{n.label}</span>
+                {idx < nodes.length - 1 && <span className="av-rail-line" />}
+              </span>
+            ))}
+          </div>
+
+          {/* Actions on the right */}
+          <div className="av-strip-actions" onClick={e => e.stopPropagation()}>
             <button
               type="button"
-              className="btn btn-secondary sm"
-              style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
+              className="btn btn-ghost sm av-strip-btn"
               onClick={() => runSequentialFlow(1)}
-              title="Re-run the 5-stage security inspection animation sequence"
+              title="Simulate 5-stage security flow"
             >
               <Icon name="bolt" size={10} />
-              <span>Simulate Pipeline Flow</span>
+              <span>Simulate</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary sm av-strip-btn"
+              onClick={() => setShowModal(true)}
+              title="Inspect full pipeline graph & consensus tree"
+            >
+              <Icon name="sparkle" size={10} />
+              <span>Inspect</span>
             </button>
           </div>
-          <span>{sub}</span>
-        </span>
-      </div>
+        </div>
 
-      <div className="av-bar">
-        <span style={{ width: `${pct}%` }} />
-      </div>
-
-      <ol className="av-flow">
-        {nodes.map(n => (
-          <li key={n.label} className={`av-node is-${n.st}`}>
-            <span className="av-dot">
-              <Icon name={n.st === 'done' ? 'check' : n.st === 'alert' ? 'alert' : n.icon} size={12} />
-            </span>
-            <span className="av-label">{n.label}</span>
-            <span className="av-count">{n.count}</span>
-          </li>
-        ))}
-      </ol>
-
-      {/* Interactive Git-Branching Accordion for BuLLSav Twin Engine */}
-      <details className="av-twin-accordion" open>
-        <summary className="av-twin-summary">
-          <div className="row" style={{ alignItems: 'center', gap: '8px' }}>
-            <span className="git-branch-pill-icon"><Icon name="git-branch" size={12} /></span>
-            <strong style={{ fontSize: '12px', color: 'var(--text)' }}>BuLLSav Twin Engine: Parallel Git-Branch Consensus</strong>
-            <span className={`badge sm ${resolved ? 'badge-ok' : (inScan.length || (isSimulating && animatingStep === 3)) ? 'badge-accent' : ''}`}>
-              {resolved ? '2 of 2 Branches Clean' : (inScan.length || (isSimulating && animatingStep === 3)) ? 'Active Consensus Scan' : 'Consensus Gate'}
-            </span>
+        {/* Hover HUD Banner ("if hovered Shows") */}
+        <div className="av-hover-hud" role="tooltip">
+          <div className="av-hover-hud-head">
+            <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
+              <Icon name="shield" size={12} />
+              <strong>BuLLSav Twin Engine: Zero-Trust Quarantine Sandbox</strong>
+            </div>
+            <span className="xs font-mono tone-ok">Unanimous 2/2 Consensus Required</span>
           </div>
-          <span className="xs muted" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span>Dual Git-Branches</span>
-            <Icon name="chevron" size={10} />
-          </span>
-        </summary>
+          <div className="av-hover-hud-branches">
+            <div className="av-hover-branch">
+              <span className="branch-dot branch-dot-clam" />
+              <div className="branch-info">
+                <span className="branch-title">🌿 ClamAV Core v1.4</span>
+                <span className="branch-sub">MD5/SHA-256 hash threat lookup, static signatures &amp; macro AST</span>
+              </div>
+              <span className="badge sm badge-ok">0 CVEs</span>
+            </div>
+            <div className="av-hover-branch">
+              <span className="branch-dot branch-dot-repel" />
+              <div className="branch-info">
+                <span className="branch-title">🌿 Repel Behavioral Shield</span>
+                <span className="branch-sub">Adversarial prompt injection repulsion, heuristic guardrails &amp; traps</span>
+              </div>
+              <span className="badge sm badge-ok">0 Exploits</span>
+            </div>
+          </div>
+          <div className="av-hover-hud-foot">
+            <span>💡 Click anywhere on the strip or [Inspect] to view the complete pipeline graph &amp; consensus tree</span>
+          </div>
+        </div>
+      </div>
 
-        <div className="av-git-tree">
+      {/* Dedicated Full Inspection Modal Dialog matching ReviewDialog pattern */}
+      <SecurityInspectionModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        state={state}
+        isSimulating={isSimulating}
+        animatingStep={animatingStep}
+        title={title}
+        sub={sub}
+        pct={pct}
+        nodes={nodes}
+        resolved={resolved}
+        inScanCount={inScan.length}
+        onSimulate={() => runSequentialFlow(1)}
+      />
+    </>
+  )
+}
+
+/** Detailed Modal Dialog for BuLLSav Twin Engine Inspection matching ReviewDialog structure */
+function SecurityInspectionModal({
+  open,
+  onClose,
+  state,
+  isSimulating,
+  animatingStep,
+  title,
+  sub,
+  pct,
+  nodes,
+  resolved,
+  inScanCount,
+  onSimulate,
+}: {
+  open: boolean
+  onClose: () => void
+  state: string
+  isSimulating: boolean
+  animatingStep: number | null
+  title: string
+  sub: string
+  pct: number
+  nodes: { label: string; st: 'idle' | 'active' | 'done' | 'alert'; count: string; icon: string }[]
+  resolved: boolean
+  inScanCount: number
+  onSimulate: () => void
+}) {
+  return (
+    <Dialog
+      open={open}
+      title="BuLLSav Twin Engine: Zero-Trust Security Pipeline"
+      onClose={onClose}
+      className="dialog wide review"
+      footer={
+        <>
+          <span className={`review-reason ${resolved ? 'tone-ok' : ''}`}>
+            <Icon name={resolved ? 'check' : 'shield'} size={12} />
+            {resolved
+              ? '✓ Unanimous Consensus Verdict (2/2 Passed) → Released to AST'
+              : 'Strict Consensus 2/2 Required before AST Release'}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary sm"
+            onClick={onSimulate}
+            title="Re-run the 5-stage security inspection animation sequence"
+          >
+            <Icon name="bolt" size={11} />
+            <span>Simulate Pipeline Flow</span>
+          </button>
+          <button type="button" className="btn btn-primary sm" onClick={onClose}>
+            Done
+          </button>
+        </>
+      }
+    >
+      <div className="av-dialog-content">
+        {/* Header with Radar Icon & Progress Bar */}
+        <div className={`av-head av-${isSimulating ? 'scanning' : state}`} style={{ marginBottom: '14px' }}>
+          <span className="av-radar" aria-hidden="true">
+            <Icon name={isSimulating ? 'spinner' : state === 'threat' ? 'alert' : 'shield'} size={16} spin={isSimulating} />
+          </span>
+          <span className="av-text">
+            <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <strong>{title}</strong>
+              <span className={`badge sm ${resolved ? 'badge-ok' : isSimulating ? 'badge-accent' : ''}`}>
+                {resolved ? '2/2 Branches Clean' : isSimulating ? `Active Step ${animatingStep}/5` : 'Zero-Trust Sandbox'}
+              </span>
+            </div>
+            <span>{sub}</span>
+          </span>
+        </div>
+
+        <div className="av-bar" style={{ marginBottom: '16px' }}>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+
+        {/* 5-Stage Visual Pipeline Nodes */}
+        <ol className="av-flow" style={{ marginBottom: '16px' }}>
+          {nodes.map(n => (
+            <li key={n.label} className={`av-node is-${n.st}`}>
+              <span className="av-dot">
+                <Icon name={n.st === 'done' ? 'check' : n.st === 'alert' ? 'alert' : n.icon} size={12} />
+              </span>
+              <span className="av-label">{n.label}</span>
+              <span className="av-count">{n.count}</span>
+            </li>
+          ))}
+        </ol>
+
+        {/* Parallel Git-Branching Consensus Architecture */}
+        <div className="av-git-tree" style={{ borderRadius: '8px', border: '1px solid var(--border)' }}>
           {/* Quarantine Ingress */}
           <div className="git-trunk-node git-ingress-node">
             <span className="git-dot-ingress" />
@@ -462,15 +620,15 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
           {/* Twin Parallel Branches */}
           <div className="git-branches-grid">
             {/* Branch A: ClamAV Core */}
-            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScan.length ? 'is-active' : resolved ? 'is-done' : ''}`}>
+            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScanCount ? 'is-active' : resolved ? 'is-done' : ''}`}>
               <div className="git-branch-header">
                 <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
                   <span className="git-branch-symbol">├──</span>
                   <span className="git-branch-code">branch: engine/clamav-core</span>
                 </div>
                 <StatusPill
-                  status={(isSimulating && animatingStep === 3) || inScan.length ? 'pending' : resolved ? 'pass' : 'pending'}
-                  text={(isSimulating && animatingStep === 3) || inScan.length ? 'Scanning Signatures…' : resolved ? 'Clean (0 CVEs)' : 'Ready'}
+                  status={(isSimulating && animatingStep === 3) || inScanCount ? 'pending' : resolved ? 'pass' : 'pending'}
+                  text={(isSimulating && animatingStep === 3) || inScanCount ? 'Scanning Signatures…' : resolved ? 'Clean (0 CVEs)' : 'Ready'}
                 />
               </div>
               <div className="git-branch-content">
@@ -485,15 +643,15 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
             </div>
 
             {/* Branch B: Repel Shield */}
-            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScan.length ? 'is-active' : resolved ? 'is-done' : ''}`}>
+            <div className={`git-branch-card ${(isSimulating && animatingStep === 3) || inScanCount ? 'is-active' : resolved ? 'is-done' : ''}`}>
               <div className="git-branch-header">
                 <div className="row" style={{ alignItems: 'center', gap: '6px' }}>
                   <span className="git-branch-symbol">└──</span>
                   <span className="git-branch-code">branch: engine/repel-shield</span>
                 </div>
                 <StatusPill
-                  status={(isSimulating && animatingStep === 3) || inScan.length ? 'pending' : resolved ? 'pass' : 'pending'}
-                  text={(isSimulating && animatingStep === 3) || inScan.length ? 'Repelling Payloads…' : resolved ? 'Repelled (0 Exploits)' : 'Ready'}
+                  status={(isSimulating && animatingStep === 3) || inScanCount ? 'pending' : resolved ? 'pass' : 'pending'}
+                  text={(isSimulating && animatingStep === 3) || inScanCount ? 'Repelling Payloads…' : resolved ? 'Repelled (0 Exploits)' : 'Ready'}
                 />
               </div>
               <div className="git-branch-content">
@@ -519,11 +677,10 @@ export function AvStatus({ uploads }: { uploads: UploadRecord[] }) {
             </span>
           </div>
         </div>
-      </details>
-    </section>
+      </div>
+    </Dialog>
   )
 }
-
 
 /** 1.1 Intake console with Three-Pane Workbench */
 export function Intake({ snap, info }: StepProps) {
